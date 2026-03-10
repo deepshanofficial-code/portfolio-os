@@ -147,16 +147,6 @@ text-align:center;
 </div>
 
 <div class="card">
-<h3>Add SIP</h3>
-
-<input id="fund" placeholder="Fund name">
-<input id="amount" placeholder="Amount">
-
-<button onclick="addMF()">Add SIP</button>
-
-</div>
-
-<div class="card">
 <h3>Update Market Price</h3>
 
 <input id="psymbol" placeholder="Stock">
@@ -216,20 +206,19 @@ text-align:center;
 
 <script>
 
-/* cursor glow */
+/* cursor */
 
 const cursor=document.getElementById("cursor")
-
 document.addEventListener("mousemove",e=>{
 cursor.style.left=e.clientX+"px"
 cursor.style.top=e.clientY+"px"
 })
 
-/* storage */
+/* STORAGE */
 
 let stocks=JSON.parse(localStorage.getItem("stocks"))||[]
 
-let mfs=JSON.parse(localStorage.getItem("mfs"))||[
+let mfs=[
 {fund:"UTI Nifty 50 Index Fund Direct Growth",amount:1300},
 {fund:"ICICI Prudential Nifty Next 50 Index",amount:600},
 {fund:"Nippon India Multi Cap Fund Direct Growth",amount:200}
@@ -244,7 +233,7 @@ SBIN:[700,740],
 LT:[3450,3650]
 }
 
-/* add stock */
+/* STOCK ENTRY */
 
 function addStock(){
 
@@ -272,22 +261,7 @@ save()
 
 }
 
-/* add MF */
-
-function addMF(){
-
-let fund=document.getElementById("fund").value
-let amount=parseFloat(document.getElementById("amount").value)
-
-mfs.push({fund,amount,date:new Date()})
-
-history.push({type:"mf",fund,amount,date:new Date()})
-
-save()
-
-}
-
-/* update market price */
+/* UPDATE PRICE */
 
 function updatePrice(){
 
@@ -300,12 +274,11 @@ save()
 
 }
 
-/* save */
+/* SAVE */
 
 function save(){
 
 localStorage.setItem("stocks",JSON.stringify(stocks))
-localStorage.setItem("mfs",JSON.stringify(mfs))
 localStorage.setItem("prices",JSON.stringify(prices))
 localStorage.setItem("history",JSON.stringify(history))
 
@@ -313,7 +286,7 @@ render()
 
 }
 
-/* render */
+/* RENDER */
 
 let sipChart
 let allocChart
@@ -326,7 +299,7 @@ let current=0
 const table=document.getElementById("holdings")
 table.innerHTML=""
 
-/* stocks */
+/* STOCKS */
 
 stocks.forEach(s=>{
 
@@ -346,84 +319,49 @@ table.innerHTML+=`
 
 })
 
-/* mutual funds */
+/* MF */
 
-mfs.forEach(m=>{
-invested+=m.amount
-current+=m.amount
-})
+/* MF SIP accumulation */
+
+const sipStart = new Date("2026-03-10")
+const today = new Date()
+
+let months =
+(today.getFullYear() - sipStart.getFullYear()) * 12 +
+(today.getMonth() - sipStart.getMonth())
+
+if(today.getDate() >= 10) months += 1
+
+if(months < 0) months = 0
+
+let monthlySip = mfs.reduce((a,b)=>a+b.amount,0)
+
+let totalMF = months * monthlySip
+
+invested += totalMF
+current += totalMF
 
 document.getElementById("invested").innerText="₹"+invested.toFixed(2)
 document.getElementById("current").innerText="₹"+current.toFixed(2)
 
 document.getElementById("profit").innerText="P/L ₹"+(current-invested).toFixed(2)
 
-/* timeline */
-
-let months={}
-
-history.forEach(h=>{
-
-let m=new Date(h.date).toLocaleString("default",{month:"long",year:"numeric"})
-
-if(!months[m]) months[m]=[]
-
-months[m].push(h)
-
-})
-
-let t=""
-
-for(let m in months){
-
-t+=`<b>${m}</b><br>`
-
-months[m].forEach(h=>{
-
-if(h.type==="stock") t+=`${h.symbol} ${h.qty} @ ₹${h.price}<br>`
-if(h.type==="mf") t+=`${h.fund} SIP ₹${h.amount}<br>`
-
-})
-
-t+="<br>"
-
-}
-
-document.getElementById("timeline").innerHTML=t
-
-/* buy zone scanner */
-
-let signals=""
-
-for(let s in zones){
-
-let p=prices[s]
-
-if(!p) continue
-
-let z=zones[s]
-
-if(p>=z[0] && p<=z[1]) signals+=`${s} in buy zone<br>`
-
-}
-
-document.getElementById("scanner").innerHTML=signals||"No signals"
-
-/* next SIP */
+/* SIP DATE */
 
 let d=new Date()
 let next=new Date(d.getFullYear(),d.getMonth(),10)
-
 if(d.getDate()>10) next.setMonth(next.getMonth()+1)
 
 document.getElementById("nextSip").innerText="Next SIP "+next.toDateString()
 
-/* charts */
+/* SIP CHART */
 
 if(sipChart) sipChart.destroy()
 
 sipChart=new Chart(document.getElementById("sipChart"),{
+
 type:"bar",
+
 data:{
 labels:mfs.map(m=>m.fund),
 datasets:[{
@@ -431,13 +369,19 @@ data:mfs.map(m=>m.amount),
 backgroundColor:"#4da3ff"
 }]
 },
+
 options:{plugins:{legend:{display:false}}}
+
 })
+
+/* ALLOCATION */
 
 if(allocChart) allocChart.destroy()
 
 allocChart=new Chart(document.getElementById("allocChart"),{
+
 type:"doughnut",
+
 data:{
 labels:["Mutual Funds","Stocks"],
 datasets:[{
@@ -448,11 +392,12 @@ stocks.reduce((a,b)=>a+(b.qty*b.avg),0)
 backgroundColor:["#4da3ff","#ff5c7a"]
 }]
 }
+
 })
 
 }
 
-/* future projection */
+/* FUTURE PROJECTION */
 
 let sip=2100
 let r=0.12/12
@@ -468,7 +413,9 @@ if(i%12===0) vals.push(Math.round(total))
 }
 
 new Chart(document.getElementById("future"),{
+
 type:"line",
+
 data:{
 labels:Array.from({length:20},(_,i)=>i+1),
 datasets:[{
@@ -477,8 +424,14 @@ borderColor:"#4da3ff",
 tension:.3
 }]
 }
+
 })
 
 document.getElementById("ageText").innerText="Projection assumes ₹2100 SIP until age 40–50"
 
 render()
+
+</script>
+
+</body>
+</html>
