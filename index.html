@@ -246,13 +246,13 @@ alert("Enter valid stock details")
 return
 }
 
-let e=stocks.find(s=>s.symbol===symbol)
+let existing=stocks.find(s=>s.symbol===symbol)
 
-if(e){
+if(existing){
 
-let total=e.qty+qty
-e.avg=((e.avg*e.qty)+(price*qty))/total
-e.qty=total
+let totalQty=existing.qty+qty
+existing.avg=((existing.avg*existing.qty)+(price*qty))/totalQty
+existing.qty=totalQty
 
 }else{
 
@@ -260,11 +260,28 @@ stocks.push({symbol:symbol,qty:qty,avg:price})
 
 }
 
-history.push({type:"stock",symbol:symbol,qty:qty,price:price,date:new Date()})
+/* ADD TO ACTIVITY LEDGER */
 
-document.getElementById("symbol").value=""
-document.getElementById("qty").value=""
-document.getElementById("price").value=""
+history.push({
+type:"stock",
+symbol:symbol,
+qty:qty,
+price:price,
+date:new Date().toISOString()
+})
+
+save()
+
+}
+/* IMPORTANT: add ledger entry */
+
+history.push({
+type:"stock",
+symbol:symbol,
+qty:qty,
+price:price,
+date:new Date().toISOString()
+})
 
 save()
 
@@ -305,9 +322,15 @@ let invested=0
 let current=0
 
 const table=document.getElementById("holdings")
-table.innerHTML=""
 
-/* STOCKS */
+table.innerHTML = `
+<tr>
+<th>Stock</th>
+<th>Qty</th>
+<th>Buy</th>
+<th>Market</th>
+</tr>
+`
 
 stocks.forEach(s=>{
 
@@ -326,7 +349,6 @@ table.innerHTML+=`
 `
 
 })
-
 /* MF */
 
 /* MF SIP accumulation */
