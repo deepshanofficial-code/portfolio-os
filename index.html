@@ -5,11 +5,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Portfolio OS</title>
+<title>Portfolio Console</title>
 
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
 
 <style>
 
@@ -26,8 +25,8 @@ overflow-x:hidden;
 body::before{
 content:'';
 position:fixed;
-width:800px;
-height:800px;
+width:900px;
+height:900px;
 background:radial-gradient(circle,#3a7bff33,transparent 70%);
 top:-200px;
 left:-200px;
@@ -44,14 +43,16 @@ animation:float 14s infinite alternate;
 
 .cursor{
 position:fixed;
-width:400px;
-height:400px;
+width:420px;
+height:420px;
 pointer-events:none;
 background:radial-gradient(circle,#5a8cff33,transparent 70%);
 transform:translate(-50%,-50%);
 filter:blur(80px);
 z-index:0;
 }
+
+/* layout */
 
 .container{
 max-width:1300px;
@@ -108,8 +109,28 @@ margin-top:10px;
 }
 
 td{
-padding:5px 0;
+padding:6px 0;
 }
+
+/* heatmap */
+
+.heatmap{
+display:grid;
+grid-template-columns:repeat(3,1fr);
+gap:8px;
+margin-top:10px;
+}
+
+.heatbox{
+padding:10px;
+border-radius:8px;
+text-align:center;
+font-size:12px;
+}
+
+.green{background:#1f8a4c}
+.red{background:#8a2f2f}
+.blue{background:#2f4c8a}
 
 </style>
 </head>
@@ -126,24 +147,42 @@ padding:5px 0;
 <div class="grid">
 
 <div class="card">
-<h3>Portfolio Value</h3>
-<div class="stat" id="value">₹0</div>
+<h3>Stocks</h3>
+<table>
+<tr><td>ITC</td><td>1 share</td></tr>
+<tr><td>Power Grid</td><td>Watch</td></tr>
+<tr><td>SBI</td><td>Watch</td></tr>
+<tr><td>L&T</td><td>Watch</td></tr>
+</table>
 </div>
 
 <div class="card">
-<h3>Add Order Screenshot</h3>
-<input type="file" id="orderUpload" accept="image/*">
-<div id="uploadStatus" class="small"></div>
+<h3>Mutual Funds</h3>
+<table>
+<tr><td>UTI Nifty 50</td><td>₹1300 SIP</td></tr>
+<tr><td>ICICI Next 50</td><td>₹600 SIP</td></tr>
+<tr><td>Nippon Multi Cap</td><td>₹200 SIP</td></tr>
+</table>
 </div>
 
 <div class="card">
-<h3>Holdings</h3>
-<table id="holdingsTable"></table>
+<h3>Upload Groww Orders</h3>
+<input type="file">
+<p class="small">Upload screenshots of orders</p>
 </div>
 
 <div class="card">
-<h3>Portfolio Growth</h3>
-<canvas id="performanceChart"></canvas>
+<h3>Sector Heatmap</h3>
+
+<div class="heatmap">
+<div class="heatbox green">Banking</div>
+<div class="heatbox blue">Power</div>
+<div class="heatbox red">Retail</div>
+<div class="heatbox blue">Infra</div>
+<div class="heatbox green">Energy</div>
+<div class="heatbox red">Aviation</div>
+</div>
+
 </div>
 
 <div class="card">
@@ -152,13 +191,25 @@ padding:5px 0;
 <canvas id="sipChart"></canvas>
 </div>
 
+<div class="card">
+<h3>AI Simulation</h3>
+<p class="small">
+Model projecting long-term portfolio compounding based on SIP discipline and stock accumulation strategy.
+</p>
+</div>
+
+<div class="card">
+<h3>Future Portfolio Projection</h3>
+<canvas id="futureChart"></canvas>
+</div>
+
 </div>
 
 </div>
 
 <script>
 
-/* cursor animation */
+/* cursor glow */
 
 const cursor=document.getElementById("cursor")
 
@@ -166,144 +217,6 @@ document.addEventListener("mousemove",e=>{
 cursor.style.left=e.clientX+"px"
 cursor.style.top=e.clientY+"px"
 })
-
-/* portfolio memory */
-
-let portfolio = JSON.parse(localStorage.getItem("portfolio")) || {
-stocks:[],
-mfs:[]
-}
-
-/* save function */
-
-function savePortfolio(){
-localStorage.setItem("portfolio",JSON.stringify(portfolio))
-}
-
-/* OCR upload */
-
-document.getElementById("orderUpload").addEventListener("change",async function(){
-
-const file=this.files[0]
-
-document.getElementById("uploadStatus").innerText="Reading order..."
-
-const result=await Tesseract.recognize(file,'eng')
-
-const text=result.data.text
-
-processOrder(text)
-
-})
-
-/* parse order */
-
-function processOrder(text){
-
-let stock=text.match(/ITC|SBIN|POWERGRID|RELIANCE/i)
-let qty=text.match(/Quantity\s*(\d+)/i)
-let price=text.match(/₹\s*([0-9,.]+)/)
-
-if(stock && qty){
-
-portfolio.stocks.push({
-symbol:stock[0].toUpperCase(),
-qty:parseInt(qty[1]),
-price:parseFloat(price[1])
-})
-
-savePortfolio()
-
-}
-
-if(text.includes("Fund") || text.includes("Nifty")){
-
-portfolio.mfs.push({
-name:"MF Investment",
-amount:parseFloat(price[1])
-})
-
-savePortfolio()
-
-}
-
-updatePortfolio()
-
-}
-
-/* update portfolio value */
-
-function updatePortfolio(){
-
-let total=0
-
-portfolio.stocks.forEach(s=>{
-total+=s.qty*s.price
-})
-
-portfolio.mfs.forEach(m=>{
-total+=m.amount
-})
-
-document.getElementById("value").innerText="₹"+total.toFixed(2)
-
-renderTable()
-
-updatePerformance(total)
-
-}
-
-/* holdings table */
-
-function renderTable(){
-
-const table=document.getElementById("holdingsTable")
-
-table.innerHTML=""
-
-portfolio.stocks.forEach(s=>{
-table.innerHTML+=`<tr><td>${s.symbol}</td><td>${s.qty}</td><td>₹${s.price}</td></tr>`
-})
-
-portfolio.mfs.forEach(m=>{
-table.innerHTML+=`<tr><td>${m.name}</td><td>-</td><td>₹${m.amount}</td></tr>`
-})
-
-}
-
-/* performance tracking */
-
-function updatePerformance(value){
-
-let perf=JSON.parse(localStorage.getItem("perf")) || []
-
-perf.push({date:Date.now(),value:value})
-
-localStorage.setItem("perf",JSON.stringify(perf))
-
-renderPerformance()
-
-}
-
-/* render performance chart */
-
-function renderPerformance(){
-
-let perf=JSON.parse(localStorage.getItem("perf")) || []
-
-new Chart(document.getElementById("performanceChart"),{
-type:"line",
-data:{
-labels:perf.map(p=>new Date(p.date).toLocaleDateString()),
-datasets:[{
-data:perf.map(p=>p.value),
-borderColor:"#4da3ff",
-fill:false
-}]
-}
-})
-
-}
 
 /* SIP chart */
 
@@ -319,7 +232,20 @@ backgroundColor:"#4da3ff"
 options:{plugins:{legend:{display:false}}}
 })
 
-updatePortfolio()
+/* future growth chart */
+
+new Chart(document.getElementById("futureChart"),{
+type:"line",
+data:{
+labels:["1Y","3Y","5Y","10Y"],
+datasets:[{
+label:"Projected Value",
+data:[25000,90000,180000,520000],
+borderColor:"#4da3ff",
+fill:false
+}]
+}
+})
 
 </script>
 
