@@ -65,6 +65,10 @@ border-radius:18px;
 padding:20px;
 }
 
+.full{
+grid-column:1/-1;
+}
+
 .stat{
 font-size:24px;
 font-weight:600;
@@ -94,24 +98,7 @@ table{
 width:100%;
 }
 
-.heatmap{
-display:grid;
-grid-template-columns:repeat(3,1fr);
-gap:6px;
-}
-
-.heatbox{
-padding:10px;
-border-radius:8px;
-text-align:center;
-}
-
-.green{background:#1f8a4c}
-.red{background:#8a2f2f}
-.blue{background:#2f4c8a}
-
 </style>
-
 </head>
 
 <body>
@@ -172,36 +159,18 @@ text-align:center;
 <canvas id="sipChart"></canvas>
 </div>
 
-<div class="card">
+<div class="card full">
 <h3>Portfolio Allocation</h3>
 <canvas id="allocChart"></canvas>
 </div>
 
-<div class="card">
-<h3>Sector Exposure</h3>
-<div class="heatmap">
-<div class="heatbox blue">Power</div>
-<div class="heatbox green">Banking</div>
-<div class="heatbox blue">Infra</div>
-<div class="heatbox red">Retail</div>
-<div class="heatbox green">Energy</div>
-<div class="heatbox red">Aviation</div>
-</div>
-</div>
-
-<div class="card">
-<h3>AI Buy Zone Scanner</h3>
-<div id="scanner"></div>
-</div>
-
-<div class="card">
+<div class="card full">
 <h3>Future Wealth</h3>
 <canvas id="future"></canvas>
 <div id="ageText"></div>
 </div>
 
 </div>
-
 </div>
 
 <script>
@@ -218,74 +187,48 @@ cursor.style.top=e.clientY+"px"
 
 let stocks=JSON.parse(localStorage.getItem("stocks"))||[]
 
-let mfs=[
+let history=JSON.parse(localStorage.getItem("history"))||[]
+
+let prices=JSON.parse(localStorage.getItem("prices"))||{}
+
+/* SIP CONFIG */
+
+const sipStart = new Date("2026-03-10")
+
+const mfs=[
 {fund:"UTI Nifty 50 Index Fund Direct Growth",amount:1300},
 {fund:"ICICI Prudential Nifty Next 50 Index",amount:600},
 {fund:"Nippon India Multi Cap Fund Direct Growth",amount:200}
 ]
 
-let prices=JSON.parse(localStorage.getItem("prices"))||{}
-let history=JSON.parse(localStorage.getItem("history"))||[]
-
-const zones={
-POWERGRID:[285,295],
-SBIN:[700,740],
-LT:[3450,3650]
-}
-
-/* STOCK ENTRY */
+/* ADD STOCK */
 
 function addStock(){
 
-let symbol=document.getElementById("symbol").value.trim().toUpperCase()
+let symbol=document.getElementById("symbol").value.toUpperCase()
 let qty=parseFloat(document.getElementById("qty").value)
 let price=parseFloat(document.getElementById("price").value)
 
-if(!symbol || isNaN(qty) || isNaN(price)){
-alert("Enter valid stock details")
-return
-}
+let e=stocks.find(s=>s.symbol===symbol)
 
-let existing=stocks.find(s=>s.symbol===symbol)
+if(e){
 
-if(existing){
-
-let totalQty=existing.qty+qty
-existing.avg=((existing.avg*existing.qty)+(price*qty))/totalQty
-existing.qty=totalQty
+let total=e.qty+qty
+e.avg=((e.avg*e.qty)+(price*qty))/total
+e.qty=total
 
 }else{
 
-stocks.push({symbol:symbol,qty:qty,avg:price})
+stocks.push({symbol,qty,avg:price})
 
 }
 
-/* ADD TO ACTIVITY LEDGER */
-
-history.push({
-type:"stock",
-symbol:symbol,
-qty:qty,
-price:price,
-date:new Date().toISOString()
-})
+history.push({type:"stock",symbol,qty,price,date:new Date()})
 
 save()
 
 }
-/* IMPORTANT: add ledger entry */
 
-history.push({
-type:"stock",
-symbol:symbol,
-qty:qty,
-price:price,
-date:new Date().toISOString()
-})
-
-save()
-
-}
 /* UPDATE PRICE */
 
 function updatePrice(){
@@ -304,10 +247,30 @@ save()
 function save(){
 
 localStorage.setItem("stocks",JSON.stringify(stocks))
-localStorage.setItem("prices",JSON.stringify(prices))
 localStorage.setItem("history",JSON.stringify(history))
+localStorage.setItem("prices",JSON.stringify(prices))
 
 render()
+
+}
+
+/* CALCULATE SIP */
+
+function getMFInvested(){
+
+const today=new Date()
+
+let months=
+(today.getFullYear()-sipStart.getFullYear())*12 +
+(today.getMonth()-sipStart.getMonth())
+
+if(today.getDate()>=10) months+=1
+
+if(months<0) months=0
+
+let monthly=mfs.reduce((a,b)=>a+b.amount,0)
+
+return months*monthly
 
 }
 
@@ -322,15 +285,9 @@ let invested=0
 let current=0
 
 const table=document.getElementById("holdings")
+table.innerHTML=""
 
-table.innerHTML = `
-<tr>
-<th>Stock</th>
-<th>Qty</th>
-<th>Buy</th>
-<th>Market</th>
-</tr>
-`
+/* STOCKS */
 
 stocks.forEach(s=>{
 
@@ -349,34 +306,50 @@ table.innerHTML+=`
 `
 
 })
+
 /* MF */
 
-/* MF SIP accumulation */
+let mfValue=getMFInvested()
 
-const sipStart = new Date("2026-03-10")
-const today = new Date()
-
-let months =
-(today.getFullYear() - sipStart.getFullYear()) * 12 +
-(today.getMonth() - sipStart.getMonth())
-
-if(today.getDate() >= 10) months += 1
-
-if(months < 0) months = 0
-
-let monthlySip = mfs.reduce((a,b)=>a+b.amount,0)
-
-let totalMF = months * monthlySip
-
-invested += totalMF
-current += totalMF
+invested+=mfValue
+current+=mfValue
 
 document.getElementById("invested").innerText="₹"+invested.toFixed(2)
 document.getElementById("current").innerText="₹"+current.toFixed(2)
 
 document.getElementById("profit").innerText="P/L ₹"+(current-invested).toFixed(2)
 
-/* SIP DATE */
+/* MONTHLY ACTIVITY */
+
+let months={}
+
+history.forEach(h=>{
+
+let m=new Date(h.date)
+.toLocaleString("default",{month:"long",year:"numeric"})
+
+if(!months[m]) months[m]=[]
+
+months[m].push(h)
+
+})
+
+let t=""
+
+for(let m in months){
+
+t+=`<b>${m}</b><br>`
+
+months[m].forEach(h=>{
+t+=`${h.symbol} ${h.qty} @ ₹${h.price}<br>`
+})
+
+t+="<br>"
+}
+
+document.getElementById("timeline").innerHTML=t
+
+/* NEXT SIP */
 
 let d=new Date()
 let next=new Date(d.getFullYear(),d.getMonth(),10)
@@ -393,9 +366,9 @@ sipChart=new Chart(document.getElementById("sipChart"),{
 type:"bar",
 
 data:{
-labels:mfs.map(m=>m.fund),
+labels:["UTI Nifty","ICICI Next 50","Nippon Multi Cap"],
 datasets:[{
-data:mfs.map(m=>m.amount),
+data:[1300,600,200],
 backgroundColor:"#4da3ff"
 }]
 },
@@ -416,7 +389,7 @@ data:{
 labels:["Mutual Funds","Stocks"],
 datasets:[{
 data:[
-mfs.reduce((a,b)=>a+b.amount,0),
+mfValue,
 stocks.reduce((a,b)=>a+(b.qty*b.avg),0)
 ],
 backgroundColor:["#4da3ff","#ff5c7a"]
