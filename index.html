@@ -9,6 +9,7 @@
 
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
 
 <style>
 
@@ -19,8 +20,6 @@ background:#05070c;
 color:#e6e9ef;
 overflow-x:hidden;
 }
-
-/* animated gradient */
 
 body::before{
 content:'';
@@ -39,8 +38,6 @@ animation:float 14s infinite alternate;
 100%{transform:translate(250px,180px)}
 }
 
-/* cursor glow */
-
 .cursor{
 position:fixed;
 width:420px;
@@ -51,8 +48,6 @@ transform:translate(-50%,-50%);
 filter:blur(80px);
 z-index:0;
 }
-
-/* layout */
 
 .container{
 max-width:1300px;
@@ -112,8 +107,6 @@ td{
 padding:6px 0;
 }
 
-/* heatmap */
-
 .heatmap{
 display:grid;
 grid-template-columns:repeat(3,1fr);
@@ -148,12 +141,7 @@ font-size:12px;
 
 <div class="card">
 <h3>Stocks</h3>
-<table>
-<tr><td>ITC</td><td>1 share</td></tr>
-<tr><td>Power Grid</td><td>Watch</td></tr>
-<tr><td>SBI</td><td>Watch</td></tr>
-<tr><td>L&T</td><td>Watch</td></tr>
-</table>
+<table id="holdingsTable"></table>
 </div>
 
 <div class="card">
@@ -167,8 +155,8 @@ font-size:12px;
 
 <div class="card">
 <h3>Upload Groww Orders</h3>
-<input type="file">
-<p class="small">Upload screenshots of orders</p>
+<input type="file" id="orderUpload" accept="image/*">
+<div id="uploadStatus" class="small"></div>
 </div>
 
 <div class="card">
@@ -192,13 +180,6 @@ font-size:12px;
 </div>
 
 <div class="card">
-<h3>AI Simulation</h3>
-<p class="small">
-Model projecting long-term portfolio compounding based on SIP discipline and stock accumulation strategy.
-</p>
-</div>
-
-<div class="card">
 <h3>Future Portfolio Projection</h3>
 <canvas id="futureChart"></canvas>
 </div>
@@ -218,6 +199,110 @@ cursor.style.left=e.clientX+"px"
 cursor.style.top=e.clientY+"px"
 })
 
+/* holdings storage */
+
+let holdings = JSON.parse(localStorage.getItem("holdings")) || []
+
+/* render holdings */
+
+function renderHoldings(){
+
+const table=document.getElementById("holdingsTable")
+
+table.innerHTML=""
+
+if(holdings.length===0){
+table.innerHTML="<tr><td>No stocks added yet</td></tr>"
+return
+}
+
+holdings.forEach(h=>{
+
+table.innerHTML+=`
+<tr>
+<td>${h.symbol}</td>
+<td>${h.qty} shares</td>
+<td>₹${h.avg.toFixed(2)}</td>
+</tr>
+`
+
+})
+
+}
+
+/* OCR upload */
+
+document.getElementById("orderUpload").addEventListener("change",async function(){
+
+const file=this.files[0]
+
+document.getElementById("uploadStatus").innerText="Reading order..."
+
+const result=await Tesseract.recognize(file,'eng')
+
+const text=result.data.text
+
+parseOrder(text)
+
+})
+
+/* parse order */
+
+function parseOrder(text){
+
+const stock=text.match(/ITC|SBIN|POWERGRID|RELIANCE|TRENT|ZOMATO/i)
+
+const qty=text.match(/Qty\s*(\d+)/i) || text.match(/Quantity\s*(\d+)/i)
+
+const price=text.match(/₹\s*([0-9,.]+)/)
+
+if(stock && qty && price){
+
+addHolding(
+stock[0].toUpperCase(),
+parseInt(qty[1]),
+parseFloat(price[1])
+)
+
+document.getElementById("uploadStatus").innerText="Order added"
+
+}else{
+
+document.getElementById("uploadStatus").innerText="Could not detect order"
+
+}
+
+}
+
+/* add or update holding */
+
+function addHolding(symbol,qty,price){
+
+let existing = holdings.find(h=>h.symbol===symbol)
+
+if(existing){
+
+const totalShares = existing.qty + qty
+
+existing.avg = ((existing.avg*existing.qty)+(price*qty))/totalShares
+existing.qty = totalShares
+
+}else{
+
+holdings.push({
+symbol:symbol,
+qty:qty,
+avg:price
+})
+
+}
+
+localStorage.setItem("holdings",JSON.stringify(holdings))
+
+renderHoldings()
+
+}
+
 /* SIP chart */
 
 new Chart(document.getElementById("sipChart"),{
@@ -232,20 +317,42 @@ backgroundColor:"#4da3ff"
 options:{plugins:{legend:{display:false}}}
 })
 
-/* future growth chart */
+/* future projection */
+
+const sip = 2100
+const years = 10
+const annualReturn = 0.12
+
+const months = years*12
+const monthlyReturn = annualReturn/12
+
+let values=[]
+let total=0
+
+for(let i=1;i<=months;i++){
+
+total = total*(1+monthlyReturn) + sip
+
+if(i%12===0){
+values.push(Math.round(total))
+}
+
+}
 
 new Chart(document.getElementById("futureChart"),{
 type:"line",
 data:{
-labels:["1Y","3Y","5Y","10Y"],
+labels:["1Y","2Y","3Y","4Y","5Y","6Y","7Y","8Y","9Y","10Y"],
 datasets:[{
 label:"Projected Value",
-data:[25000,90000,180000,520000],
+data:values,
 borderColor:"#4da3ff",
-fill:false
+tension:.35
 }]
 }
 })
+
+renderHoldings()
 
 </script>
 
