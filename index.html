@@ -1,3 +1,221 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Portfolio OS</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+
+body{
+margin:0;
+font-family:Inter;
+background:#05070c;
+color:#e6e9ef;
+overflow-x:hidden;
+}
+
+body::before{
+content:'';
+position:fixed;
+width:900px;
+height:900px;
+background:radial-gradient(circle,#3a7bff33,transparent 70%);
+top:-200px;
+left:-200px;
+filter:blur(120px);
+animation:float 14s infinite alternate;
+}
+
+@keyframes float{
+0%{transform:translate(0,0)}
+100%{transform:translate(250px,180px)}
+}
+
+.cursor{
+position:fixed;
+width:420px;
+height:420px;
+pointer-events:none;
+background:radial-gradient(circle,#5a8cff33,transparent 70%);
+transform:translate(-50%,-50%);
+filter:blur(80px);
+}
+
+.container{
+max-width:1300px;
+margin:auto;
+padding:40px;
+}
+
+.grid{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+gap:20px;
+}
+
+.card{
+background:#12161f;
+border-radius:18px;
+padding:20px;
+}
+
+.stat{
+font-size:24px;
+font-weight:600;
+}
+
+input{
+width:100%;
+padding:8px;
+margin-top:8px;
+background:#0e1219;
+border:none;
+color:white;
+border-radius:6px;
+}
+
+button{
+margin-top:10px;
+padding:10px;
+background:#4da3ff;
+border:none;
+border-radius:8px;
+color:white;
+cursor:pointer;
+}
+
+table{
+width:100%;
+}
+
+.heatmap{
+display:grid;
+grid-template-columns:repeat(3,1fr);
+gap:6px;
+}
+
+.heatbox{
+padding:10px;
+border-radius:8px;
+text-align:center;
+}
+
+.green{background:#1f8a4c}
+.red{background:#8a2f2f}
+.blue{background:#2f4c8a}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="cursor" id="cursor"></div>
+
+<div class="container">
+
+<h1>Portfolio OS</h1>
+
+<div class="grid">
+
+<div class="card">
+<h3>Total Invested</h3>
+<div class="stat" id="invested">₹0</div>
+</div>
+
+<div class="card">
+<h3>Current Portfolio</h3>
+<div class="stat" id="current">₹0</div>
+<div id="profit"></div>
+</div>
+
+<div class="card">
+<h3>Add Stock</h3>
+
+<input id="symbol" placeholder="Stock">
+<input id="qty" placeholder="Qty">
+<input id="price" placeholder="Buy Price">
+
+<button onclick="addStock()">Add</button>
+
+</div>
+
+<div class="card">
+<h3>Add SIP</h3>
+
+<input id="fund" placeholder="Fund name">
+<input id="amount" placeholder="Amount">
+
+<button onclick="addMF()">Add SIP</button>
+
+</div>
+
+<div class="card">
+<h3>Update Market Price</h3>
+
+<input id="psymbol" placeholder="Stock">
+<input id="marketPrice" placeholder="Latest Price">
+
+<button onclick="updatePrice()">Update</button>
+
+</div>
+
+<div class="card">
+<h3>Holdings</h3>
+<table id="holdings"></table>
+</div>
+
+<div class="card">
+<h3>Monthly Activity</h3>
+<div id="timeline"></div>
+</div>
+
+<div class="card">
+<h3>SIP Engine</h3>
+<div id="nextSip"></div>
+<canvas id="sipChart"></canvas>
+</div>
+
+<div class="card">
+<h3>Portfolio Allocation</h3>
+<canvas id="allocChart"></canvas>
+</div>
+
+<div class="card">
+<h3>Sector Exposure</h3>
+<div class="heatmap">
+<div class="heatbox blue">Power</div>
+<div class="heatbox green">Banking</div>
+<div class="heatbox blue">Infra</div>
+<div class="heatbox red">Retail</div>
+<div class="heatbox green">Energy</div>
+<div class="heatbox red">Aviation</div>
+</div>
+</div>
+
+<div class="card">
+<h3>AI Buy Zone Scanner</h3>
+<div id="scanner"></div>
+</div>
+
+<div class="card">
+<h3>Future Wealth</h3>
+<canvas id="future"></canvas>
+<div id="ageText"></div>
+</div>
+
+</div>
+
+</div>
+
+<script>
+
 /* cursor glow */
 
 const cursor=document.getElementById("cursor")
