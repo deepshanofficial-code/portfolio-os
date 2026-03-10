@@ -211,6 +211,7 @@ LT:[3450,3650]
 async function fetchMarketData(){
 
 const key = "Z1DP1UB2798I7PAM"
+const quantity = 1
 
 try{
 
@@ -220,12 +221,21 @@ const response = await fetch(
 
 const data = await response.json()
 
-const itc = data["Global Quote"]["05. price"]
+if(!data["Global Quote"]){
+console.log("API limit or bad response")
+return
+}
 
-if(itc){
+const price = parseFloat(data["Global Quote"]["05. price"])
 
-document.getElementById("itcPrice").innerText = "₹"+itc
-document.getElementById("value").innerText = "₹"+itc
+if(price){
+
+const portfolioValue = price * quantity
+
+document.getElementById("itcPrice").innerText = "₹"+price.toFixed(2)
+
+document.getElementById("value").innerText =
+"₹"+portfolioValue.toFixed(2)
 
 }
 
@@ -236,7 +246,6 @@ console.log("Market data unavailable")
 }
 
 }
-
 /* AUTO REFRESH */
 
 fetchMarketData()
