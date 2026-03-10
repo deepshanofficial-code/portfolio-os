@@ -20,7 +20,7 @@ color:#e6e9ef;
 overflow-x:hidden;
 }
 
-/* animated background */
+/* background glow */
 
 body::before{
 content:'';
@@ -89,18 +89,12 @@ transition:.3s;
 
 .card:hover{
 transform:translateY(-6px);
-box-shadow:0 25px 80px rgba(0,0,0,.8);
 }
 
 .stat{
-font-size:26px;
+font-size:24px;
 font-weight:600;
 margin-top:6px;
-}
-
-.small{
-font-size:12px;
-opacity:.65;
 }
 
 table{
@@ -111,26 +105,6 @@ margin-top:10px;
 td{
 padding:6px 0;
 }
-
-/* heatmap */
-
-.heatmap{
-display:grid;
-grid-template-columns:repeat(3,1fr);
-gap:8px;
-margin-top:10px;
-}
-
-.heatbox{
-padding:10px;
-border-radius:8px;
-text-align:center;
-font-size:12px;
-}
-
-.green{background:#1f8a4c}
-.red{background:#8a2f2f}
-.blue{background:#2f4c8a}
 
 input{
 width:100%;
@@ -152,6 +126,24 @@ color:white;
 cursor:pointer;
 }
 
+.heatmap{
+display:grid;
+grid-template-columns:repeat(3,1fr);
+gap:8px;
+margin-top:10px;
+}
+
+.heatbox{
+padding:10px;
+border-radius:8px;
+text-align:center;
+font-size:12px;
+}
+
+.green{background:#1f8a4c}
+.red{background:#8a2f2f}
+.blue{background:#2f4c8a}
+
 </style>
 </head>
 
@@ -167,55 +159,80 @@ cursor:pointer;
 <div class="grid">
 
 <div class="card">
-<h3>Stocks Ledger</h3>
-<table id="holdingsTable"></table>
+<h3>Total Invested</h3>
+<div class="stat" id="invested">₹0</div>
+</div>
+
+<div class="card">
+<h3>Current Portfolio Value</h3>
+<div class="stat" id="currentValue">₹0</div>
+<div id="profit"></div>
 </div>
 
 <div class="card">
 <h3>Add Stock Order</h3>
 
-<input id="symbol" placeholder="Stock (example: ITC)">
+<input id="symbol" placeholder="Stock (ITC)">
 <input id="qty" placeholder="Quantity">
-<input id="price" placeholder="Avg price (example: 306.60)">
+<input id="price" placeholder="Buy price">
 
 <button onclick="addOrder()">Add Order</button>
 
-<p class="small">Enter order details from Groww order screen</p>
+</div>
+
+<div class="card">
+<h3>Update Last Price</h3>
+
+<input id="priceSymbol" placeholder="Stock (ITC)">
+<input id="lastPrice" placeholder="Latest price">
+
+<button onclick="updatePrice()">Update</button>
 
 </div>
 
 <div class="card">
-<h3>Mutual Funds</h3>
-<table>
-<tr><td>UTI Nifty 50</td><td>₹1300 SIP</td></tr>
-<tr><td>ICICI Next 50</td><td>₹600 SIP</td></tr>
-<tr><td>Nippon Multi Cap</td><td>₹200 SIP</td></tr>
-</table>
+<h3>Holdings</h3>
+<table id="holdingsTable"></table>
 </div>
 
 <div class="card">
-<h3>Sector Heatmap</h3>
-
-<div class="heatmap">
-<div class="heatbox green">Banking</div>
-<div class="heatbox blue">Power</div>
-<div class="heatbox red">Retail</div>
-<div class="heatbox blue">Infra</div>
-<div class="heatbox green">Energy</div>
-<div class="heatbox red">Aviation</div>
-</div>
-
+<h3>Monthly Activity</h3>
+<div id="timeline"></div>
 </div>
 
 <div class="card">
 <h3>SIP Engine</h3>
 <div class="stat">₹2100 / month</div>
+<p>Next SIP: <span id="nextSip"></span></p>
 <canvas id="sipChart"></canvas>
 </div>
 
 <div class="card">
-<h3>Future Portfolio Projection</h3>
+<h3>Portfolio Allocation</h3>
+<canvas id="allocChart"></canvas>
+</div>
+
+<div class="card">
+<h3>Sector Exposure</h3>
+<div class="heatmap">
+<div class="heatbox blue">Power</div>
+<div class="heatbox green">Banking</div>
+<div class="heatbox blue">Infra</div>
+<div class="heatbox red">Retail</div>
+<div class="heatbox green">Energy</div>
+<div class="heatbox red">Aviation</div>
+</div>
+</div>
+
+<div class="card">
+<h3>AI Buy Zone Scanner</h3>
+<div id="buySignals"></div>
+</div>
+
+<div class="card">
+<h3>Future Wealth Projection</h3>
 <canvas id="futureChart"></canvas>
+<p id="ageProjection"></p>
 </div>
 
 </div>
@@ -224,7 +241,7 @@ cursor:pointer;
 
 <script>
 
-/* cursor glow */
+/* cursor */
 
 const cursor=document.getElementById("cursor")
 
@@ -233,33 +250,15 @@ cursor.style.left=e.clientX+"px"
 cursor.style.top=e.clientY+"px"
 })
 
-/* holdings storage */
+/* storage */
 
-let holdings = JSON.parse(localStorage.getItem("holdings")) || []
+let holdings=JSON.parse(localStorage.getItem("holdings"))||[]
+let prices=JSON.parse(localStorage.getItem("prices"))||[]
 
-function renderHoldings(){
-
-const table=document.getElementById("holdingsTable")
-
-table.innerHTML=""
-
-if(holdings.length===0){
-table.innerHTML="<tr><td>No stocks added yet</td></tr>"
-return
-}
-
-holdings.forEach(h=>{
-
-table.innerHTML+=`
-<tr>
-<td>${h.symbol}</td>
-<td>${h.qty} shares</td>
-<td>₹${h.avg.toFixed(2)}</td>
-</tr>
-`
-
-})
-
+const buyZones={
+POWERGRID:[285,295],
+SBIN:[700,740],
+LT:[3450,3650]
 }
 
 /* add order */
@@ -267,40 +266,93 @@ table.innerHTML+=`
 function addOrder(){
 
 const symbol=document.getElementById("symbol").value.toUpperCase()
-const qty=parseInt(document.getElementById("qty").value)
+const qty=parseFloat(document.getElementById("qty").value)
 const price=parseFloat(document.getElementById("price").value)
-
-if(!symbol || !qty || !price){
-alert("Please fill all fields")
-return
-}
 
 let existing=holdings.find(h=>h.symbol===symbol)
 
 if(existing){
 
 const totalShares=existing.qty+qty
-
 existing.avg=((existing.avg*existing.qty)+(price*qty))/totalShares
 existing.qty=totalShares
 
 }else{
 
-holdings.push({
-symbol:symbol,
-qty:qty,
-avg:price
-})
+holdings.push({symbol,qty,avg:price})
 
 }
 
 localStorage.setItem("holdings",JSON.stringify(holdings))
 
-renderHoldings()
+render()
 
-document.getElementById("symbol").value=""
-document.getElementById("qty").value=""
-document.getElementById("price").value=""
+}
+
+/* update price */
+
+function updatePrice(){
+
+const symbol=document.getElementById("priceSymbol").value.toUpperCase()
+const price=parseFloat(document.getElementById("lastPrice").value)
+
+prices[symbol]=price
+
+localStorage.setItem("prices",JSON.stringify(prices))
+
+render()
+
+}
+
+/* render dashboard */
+
+function render(){
+
+let invested=0
+let current=0
+
+const table=document.getElementById("holdingsTable")
+table.innerHTML=""
+
+holdings.forEach(h=>{
+
+invested+=h.qty*h.avg
+
+let last=prices[h.symbol]||0
+
+current+=h.qty*last
+
+table.innerHTML+=`
+<tr>
+<td>${h.symbol}</td>
+<td>${h.qty}</td>
+<td>₹${h.avg}</td>
+<td>₹${last||"-"}</td>
+</tr>
+`
+
+})
+
+document.getElementById("invested").innerText="₹"+invested.toFixed(2)
+document.getElementById("currentValue").innerText="₹"+current.toFixed(2)
+
+const diff=current-invested
+
+document.getElementById("profit").innerText=
+(diff>=0?"+":"")+diff.toFixed(2)
+
+/* allocation chart */
+
+new Chart(document.getElementById("allocChart"),{
+type:"doughnut",
+data:{
+labels:["Stocks","Mutual Funds"],
+datasets:[{
+data:[invested,2100],
+backgroundColor:["#4da3ff","#ff5c7a"]
+}]
+}
+})
 
 }
 
@@ -318,42 +370,48 @@ backgroundColor:"#4da3ff"
 options:{plugins:{legend:{display:false}}}
 })
 
+/* SIP next date */
+
+const today=new Date()
+let next=new Date(today.getFullYear(),today.getMonth(),10)
+
+if(today.getDate()>10) next.setMonth(next.getMonth()+1)
+
+document.getElementById("nextSip").innerText=next.toDateString()
+
 /* future projection */
 
 const sip=2100
-const years=10
-const annualReturn=0.12
-
-const months=years*12
-const monthlyReturn=annualReturn/12
-
-let values=[]
+const annual=0.12
 let total=0
+let vals=[]
 
-for(let i=1;i<=months;i++){
+for(let y=1;y<=20;y++){
 
-total=total*(1+monthlyReturn)+sip
-
-if(i%12===0){
-values.push(Math.round(total))
+for(let m=0;m<12;m++){
+total=total*(1+annual/12)+sip
 }
+
+vals.push(Math.round(total))
 
 }
 
 new Chart(document.getElementById("futureChart"),{
 type:"line",
 data:{
-labels:["1Y","2Y","3Y","4Y","5Y","6Y","7Y","8Y","9Y","10Y"],
+labels:["1Y","2Y","3Y","4Y","5Y","6Y","7Y","8Y","9Y","10Y","11Y","12Y","13Y","14Y","15Y","16Y","17Y","18Y","19Y","20Y"],
 datasets:[{
-label:"Projected Value",
-data:values,
+data:vals,
 borderColor:"#4da3ff",
-tension:.35
+tension:.3
 }]
 }
 })
 
-renderHoldings()
+document.getElementById("ageProjection").innerText=
+"Projected value by 40–50 if SIP continues."
+
+render()
 
 </script>
 
