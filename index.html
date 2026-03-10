@@ -1,221 +1,3 @@
-<!DOCTYPE html>
-<html>
-<head>
-
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>Portfolio OS</title>
-
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-<style>
-
-body{
-margin:0;
-font-family:Inter;
-background:#05070c;
-color:#e6e9ef;
-overflow-x:hidden;
-}
-
-body::before{
-content:'';
-position:fixed;
-width:900px;
-height:900px;
-background:radial-gradient(circle,#3a7bff33,transparent 70%);
-top:-200px;
-left:-200px;
-filter:blur(120px);
-animation:float 14s infinite alternate;
-}
-
-@keyframes float{
-0%{transform:translate(0,0)}
-100%{transform:translate(250px,180px)}
-}
-
-.cursor{
-position:fixed;
-width:420px;
-height:420px;
-pointer-events:none;
-background:radial-gradient(circle,#5a8cff33,transparent 70%);
-transform:translate(-50%,-50%);
-filter:blur(80px);
-}
-
-.container{
-max-width:1300px;
-margin:auto;
-padding:40px;
-}
-
-.grid{
-display:grid;
-grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
-gap:20px;
-}
-
-.card{
-background:#12161f;
-border-radius:18px;
-padding:20px;
-}
-
-.stat{
-font-size:24px;
-font-weight:600;
-}
-
-input{
-width:100%;
-padding:8px;
-margin-top:8px;
-background:#0e1219;
-border:none;
-color:white;
-border-radius:6px;
-}
-
-button{
-margin-top:10px;
-padding:10px;
-background:#4da3ff;
-border:none;
-border-radius:8px;
-color:white;
-cursor:pointer;
-}
-
-table{
-width:100%;
-}
-
-.heatmap{
-display:grid;
-grid-template-columns:repeat(3,1fr);
-gap:6px;
-}
-
-.heatbox{
-padding:10px;
-border-radius:8px;
-text-align:center;
-}
-
-.green{background:#1f8a4c}
-.red{background:#8a2f2f}
-.blue{background:#2f4c8a}
-
-</style>
-
-</head>
-
-<body>
-
-<div class="cursor" id="cursor"></div>
-
-<div class="container">
-
-<h1>Portfolio OS</h1>
-
-<div class="grid">
-
-<div class="card">
-<h3>Total Invested</h3>
-<div class="stat" id="invested">₹0</div>
-</div>
-
-<div class="card">
-<h3>Current Portfolio</h3>
-<div class="stat" id="current">₹0</div>
-<div id="profit"></div>
-</div>
-
-<div class="card">
-<h3>Add Stock</h3>
-
-<input id="symbol" placeholder="Stock">
-<input id="qty" placeholder="Qty">
-<input id="price" placeholder="Buy Price">
-
-<button onclick="addStock()">Add</button>
-
-</div>
-
-<div class="card">
-<h3>Add SIP</h3>
-
-<input id="fund" placeholder="Fund name">
-<input id="amount" placeholder="Amount">
-
-<button onclick="addMF()">Add SIP</button>
-
-</div>
-
-<div class="card">
-<h3>Update Market Price</h3>
-
-<input id="psymbol" placeholder="Stock">
-<input id="marketPrice" placeholder="Latest Price">
-
-<button onclick="updatePrice()">Update</button>
-
-</div>
-
-<div class="card">
-<h3>Holdings</h3>
-<table id="holdings"></table>
-</div>
-
-<div class="card">
-<h3>Monthly Activity</h3>
-<div id="timeline"></div>
-</div>
-
-<div class="card">
-<h3>SIP Engine</h3>
-<div id="nextSip"></div>
-<canvas id="sipChart"></canvas>
-</div>
-
-<div class="card">
-<h3>Portfolio Allocation</h3>
-<canvas id="allocChart"></canvas>
-</div>
-
-<div class="card">
-<h3>Sector Exposure</h3>
-<div class="heatmap">
-<div class="heatbox blue">Power</div>
-<div class="heatbox green">Banking</div>
-<div class="heatbox blue">Infra</div>
-<div class="heatbox red">Retail</div>
-<div class="heatbox green">Energy</div>
-<div class="heatbox red">Aviation</div>
-</div>
-</div>
-
-<div class="card">
-<h3>AI Buy Zone Scanner</h3>
-<div id="scanner"></div>
-</div>
-
-<div class="card">
-<h3>Future Wealth</h3>
-<canvas id="future"></canvas>
-<div id="ageText"></div>
-</div>
-
-</div>
-
-</div>
-
-<script>
-
 /* cursor glow */
 
 const cursor=document.getElementById("cursor")
@@ -228,11 +10,13 @@ cursor.style.top=e.clientY+"px"
 /* storage */
 
 let stocks=JSON.parse(localStorage.getItem("stocks"))||[]
+
 let mfs=JSON.parse(localStorage.getItem("mfs"))||[
-{fund:"UTI Nifty 50",amount:1300},
-{fund:"ICICI Next 50",amount:600},
-{fund:"Nippon Multi Cap",amount:200}
+{fund:"UTI Nifty 50 Index Fund Direct Growth",amount:1300},
+{fund:"ICICI Prudential Nifty Next 50 Index",amount:600},
+{fund:"Nippon India Multi Cap Fund Direct Growth",amount:200}
 ]
+
 let prices=JSON.parse(localStorage.getItem("prices"))||{}
 let history=JSON.parse(localStorage.getItem("history"))||[]
 
@@ -285,7 +69,7 @@ save()
 
 }
 
-/* update price */
+/* update market price */
 
 function updatePrice(){
 
@@ -313,6 +97,9 @@ render()
 
 /* render */
 
+let sipChart
+let allocChart
+
 function render(){
 
 let invested=0
@@ -320,6 +107,8 @@ let current=0
 
 const table=document.getElementById("holdings")
 table.innerHTML=""
+
+/* stocks */
 
 stocks.forEach(s=>{
 
@@ -338,6 +127,8 @@ table.innerHTML+=`
 `
 
 })
+
+/* mutual funds */
 
 mfs.forEach(m=>{
 invested+=m.amount
@@ -382,7 +173,7 @@ t+="<br>"
 
 document.getElementById("timeline").innerHTML=t
 
-/* buy zones */
+/* buy zone scanner */
 
 let signals=""
 
@@ -404,15 +195,16 @@ document.getElementById("scanner").innerHTML=signals||"No signals"
 
 let d=new Date()
 let next=new Date(d.getFullYear(),d.getMonth(),10)
+
 if(d.getDate()>10) next.setMonth(next.getMonth()+1)
 
 document.getElementById("nextSip").innerText="Next SIP "+next.toDateString()
 
-}
+/* charts */
 
-/* SIP chart */
+if(sipChart) sipChart.destroy()
 
-new Chart(document.getElementById("sipChart"),{
+sipChart=new Chart(document.getElementById("sipChart"),{
 type:"bar",
 data:{
 labels:mfs.map(m=>m.fund),
@@ -420,10 +212,29 @@ datasets:[{
 data:mfs.map(m=>m.amount),
 backgroundColor:"#4da3ff"
 }]
+},
+options:{plugins:{legend:{display:false}}}
+})
+
+if(allocChart) allocChart.destroy()
+
+allocChart=new Chart(document.getElementById("allocChart"),{
+type:"doughnut",
+data:{
+labels:["Mutual Funds","Stocks"],
+datasets:[{
+data:[
+mfs.reduce((a,b)=>a+b.amount,0),
+stocks.reduce((a,b)=>a+(b.qty*b.avg),0)
+],
+backgroundColor:["#4da3ff","#ff5c7a"]
+}]
 }
 })
 
-/* projection */
+}
+
+/* future projection */
 
 let sip=2100
 let r=0.12/12
@@ -442,15 +253,14 @@ new Chart(document.getElementById("future"),{
 type:"line",
 data:{
 labels:Array.from({length:20},(_,i)=>i+1),
-datasets:[{data:vals,borderColor:"#4da3ff"}]
+datasets:[{
+data:vals,
+borderColor:"#4da3ff",
+tension:.3
+}]
 }
 })
 
-document.getElementById("ageText").innerText="Projection assumes SIP till age 40-50"
+document.getElementById("ageText").innerText="Projection assumes ₹2100 SIP until age 40–50"
 
 render()
-
-</script>
-
-</body>
-</html>
