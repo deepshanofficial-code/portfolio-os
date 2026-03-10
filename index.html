@@ -17,6 +17,34 @@ margin:0;
 font-family:Inter;
 background:#05070c;
 color:#e6e9ef;
+overflow-x:hidden;
+}
+
+body::before{
+content:'';
+position:fixed;
+width:900px;
+height:900px;
+background:radial-gradient(circle,#3a7bff33,transparent 70%);
+top:-200px;
+left:-200px;
+filter:blur(120px);
+animation:float 14s infinite alternate;
+}
+
+@keyframes float{
+0%{transform:translate(0,0)}
+100%{transform:translate(250px,180px)}
+}
+
+.cursor{
+position:fixed;
+width:420px;
+height:420px;
+pointer-events:none;
+background:radial-gradient(circle,#5a8cff33,transparent 70%);
+transform:translate(-50%,-50%);
+filter:blur(80px);
 }
 
 .container{
@@ -33,7 +61,7 @@ gap:20px;
 
 .card{
 background:#12161f;
-border-radius:16px;
+border-radius:18px;
 padding:20px;
 }
 
@@ -45,7 +73,7 @@ font-weight:600;
 input{
 width:100%;
 padding:8px;
-margin-top:6px;
+margin-top:8px;
 background:#0e1219;
 border:none;
 color:white;
@@ -66,11 +94,29 @@ table{
 width:100%;
 }
 
+.heatmap{
+display:grid;
+grid-template-columns:repeat(3,1fr);
+gap:6px;
+}
+
+.heatbox{
+padding:10px;
+border-radius:8px;
+text-align:center;
+}
+
+.green{background:#1f8a4c}
+.red{background:#8a2f2f}
+.blue{background:#2f4c8a}
+
 </style>
 
 </head>
 
 <body>
+
+<div class="cursor" id="cursor"></div>
 
 <div class="container">
 
@@ -84,7 +130,7 @@ width:100%;
 </div>
 
 <div class="card">
-<h3>Current Portfolio Value</h3>
+<h3>Current Portfolio</h3>
 <div class="stat" id="current">₹0</div>
 <div id="profit"></div>
 </div>
@@ -114,7 +160,7 @@ width:100%;
 <h3>Update Market Price</h3>
 
 <input id="psymbol" placeholder="Stock">
-<input id="marketPrice" placeholder="Price">
+<input id="marketPrice" placeholder="Latest Price">
 
 <button onclick="updatePrice()">Update</button>
 
@@ -131,14 +177,26 @@ width:100%;
 </div>
 
 <div class="card">
-<h3>Portfolio Allocation</h3>
-<canvas id="alloc"></canvas>
-</div>
-
-<div class="card">
 <h3>SIP Engine</h3>
 <div id="nextSip"></div>
 <canvas id="sipChart"></canvas>
+</div>
+
+<div class="card">
+<h3>Portfolio Allocation</h3>
+<canvas id="allocChart"></canvas>
+</div>
+
+<div class="card">
+<h3>Sector Exposure</h3>
+<div class="heatmap">
+<div class="heatbox blue">Power</div>
+<div class="heatbox green">Banking</div>
+<div class="heatbox blue">Infra</div>
+<div class="heatbox red">Retail</div>
+<div class="heatbox green">Energy</div>
+<div class="heatbox red">Aviation</div>
+</div>
 </div>
 
 <div class="card">
@@ -158,14 +216,25 @@ width:100%;
 
 <script>
 
+/* cursor glow */
+
+const cursor=document.getElementById("cursor")
+
+document.addEventListener("mousemove",e=>{
+cursor.style.left=e.clientX+"px"
+cursor.style.top=e.clientY+"px"
+})
+
 /* storage */
 
 let stocks=JSON.parse(localStorage.getItem("stocks"))||[]
-let mfs=JSON.parse(localStorage.getItem("mfs"))||[]
+let mfs=JSON.parse(localStorage.getItem("mfs"))||[
+{fund:"UTI Nifty 50",amount:1300},
+{fund:"ICICI Next 50",amount:600},
+{fund:"Nippon Multi Cap",amount:200}
+]
 let prices=JSON.parse(localStorage.getItem("prices"))||{}
 let history=JSON.parse(localStorage.getItem("history"))||[]
-
-/* buy zones */
 
 const zones={
 POWERGRID:[285,295],
@@ -313,7 +382,7 @@ t+="<br>"
 
 document.getElementById("timeline").innerHTML=t
 
-/* buy zone */
+/* buy zones */
 
 let signals=""
 
@@ -341,15 +410,20 @@ document.getElementById("nextSip").innerText="Next SIP "+next.toDateString()
 
 }
 
-/* charts */
+/* SIP chart */
 
 new Chart(document.getElementById("sipChart"),{
 type:"bar",
 data:{
-labels:["UTI Nifty","ICICI Next50","Nippon MultiCap"],
-datasets:[{data:[1300,600,200]}]
+labels:mfs.map(m=>m.fund),
+datasets:[{
+data:mfs.map(m=>m.amount),
+backgroundColor:"#4da3ff"
+}]
 }
 })
+
+/* projection */
 
 let sip=2100
 let r=0.12/12
@@ -368,7 +442,7 @@ new Chart(document.getElementById("future"),{
 type:"line",
 data:{
 labels:Array.from({length:20},(_,i)=>i+1),
-datasets:[{data:vals}]
+datasets:[{data:vals,borderColor:"#4da3ff"}]
 }
 })
 
