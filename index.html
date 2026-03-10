@@ -250,30 +250,45 @@ parseOrder(text)
 
 function parseOrder(text){
 
-const stock=text.match(/ITC|SBIN|POWERGRID|RELIANCE|TRENT|ZOMATO/i)
+console.log("OCR TEXT:", text)
 
-const qty=text.match(/Qty\s*(\d+)/i) || text.match(/Quantity\s*(\d+)/i)
+/* detect stock */
 
-const price=text.match(/₹\s*([0-9,.]+)/)
+const stock = text.match(/ITC|SBIN|POWERGRID|RELIANCE|TRENT|ZOMATO/i)
 
-if(stock && qty && price){
+/* detect quantity */
 
-addHolding(
-stock[0].toUpperCase(),
-parseInt(qty[1]),
-parseFloat(price[1])
-)
+let qtyMatch =
+text.match(/Qty\s*[:\-]?\s*(\d+)/i) ||
+text.match(/Quantity\s*[:\-]?\s*(\d+)/i) ||
+text.match(/(\d+)\s*Qty/i)
 
-document.getElementById("uploadStatus").innerText="Order added"
+/* detect price (prefer avg price if available) */
+
+let priceMatch =
+text.match(/Avg\s*price\s*₹?\s*([0-9,.]+)/i) ||
+text.match(/Limit\s*at\s*₹?\s*([0-9,.]+)/i) ||
+text.match(/₹\s*([0-9,.]+)/)
+
+if(stock && qtyMatch && priceMatch){
+
+const symbol = stock[0].toUpperCase()
+const qty = parseInt(qtyMatch[1] || qtyMatch[2])
+const price = parseFloat(priceMatch[1].replace(",",""))
+
+addHolding(symbol, qty, price)
+
+document.getElementById("uploadStatus").innerText =
+`Added ${qty} ${symbol} @ ₹${price}`
 
 }else{
 
-document.getElementById("uploadStatus").innerText="Could not detect order"
+document.getElementById("uploadStatus").innerText =
+"Could not detect order — try clearer screenshot"
 
 }
 
 }
-
 /* add or update holding */
 
 function addHolding(symbol,qty,price){
