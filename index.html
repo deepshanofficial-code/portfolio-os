@@ -221,27 +221,28 @@ const response = await fetch(
 
 const data = await response.json()
 
-if(!data["Global Quote"]){
-console.log("API limit or bad response")
+// ensure quote exists
+if(!data["Global Quote"] || !data["Global Quote"]["05. price"]){
+console.log("API returned no quote (rate limit likely)")
 return
 }
 
 const price = parseFloat(data["Global Quote"]["05. price"])
 
-if(price){
+// ignore obviously wrong values
+if(isNaN(price) || price < 100){
+console.log("Invalid price detected:", price)
+return
+}
 
 const portfolioValue = price * quantity
 
 document.getElementById("itcPrice").innerText = "₹"+price.toFixed(2)
+document.getElementById("value").innerText = "₹"+portfolioValue.toFixed(2)
 
-document.getElementById("value").innerText =
-"₹"+portfolioValue.toFixed(2)
+}catch(err){
 
-}
-
-}catch{
-
-console.log("Market data unavailable")
+console.log("Market data unavailable", err)
 
 }
 
