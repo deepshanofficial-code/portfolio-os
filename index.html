@@ -9,7 +9,6 @@
 
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
 
 <style>
 
@@ -20,6 +19,8 @@ background:#05070c;
 color:#e6e9ef;
 overflow-x:hidden;
 }
+
+/* animated background */
 
 body::before{
 content:'';
@@ -38,6 +39,8 @@ animation:float 14s infinite alternate;
 100%{transform:translate(250px,180px)}
 }
 
+/* cursor glow */
+
 .cursor{
 position:fixed;
 width:420px;
@@ -48,6 +51,8 @@ transform:translate(-50%,-50%);
 filter:blur(80px);
 z-index:0;
 }
+
+/* layout */
 
 .container{
 max-width:1300px;
@@ -107,6 +112,8 @@ td{
 padding:6px 0;
 }
 
+/* heatmap */
+
 .heatmap{
 display:grid;
 grid-template-columns:repeat(3,1fr);
@@ -125,6 +132,26 @@ font-size:12px;
 .red{background:#8a2f2f}
 .blue{background:#2f4c8a}
 
+input{
+width:100%;
+padding:8px;
+margin-top:8px;
+background:#0d1118;
+border:none;
+color:white;
+border-radius:6px;
+}
+
+button{
+margin-top:10px;
+padding:10px;
+background:#4da3ff;
+border:none;
+border-radius:8px;
+color:white;
+cursor:pointer;
+}
+
 </style>
 </head>
 
@@ -140,8 +167,21 @@ font-size:12px;
 <div class="grid">
 
 <div class="card">
-<h3>Stocks</h3>
+<h3>Stocks Ledger</h3>
 <table id="holdingsTable"></table>
+</div>
+
+<div class="card">
+<h3>Add Stock Order</h3>
+
+<input id="symbol" placeholder="Stock (example: ITC)">
+<input id="qty" placeholder="Quantity">
+<input id="price" placeholder="Avg price (example: 306.60)">
+
+<button onclick="addOrder()">Add Order</button>
+
+<p class="small">Enter order details from Groww order screen</p>
+
 </div>
 
 <div class="card">
@@ -151,12 +191,6 @@ font-size:12px;
 <tr><td>ICICI Next 50</td><td>₹600 SIP</td></tr>
 <tr><td>Nippon Multi Cap</td><td>₹200 SIP</td></tr>
 </table>
-</div>
-
-<div class="card">
-<h3>Upload Groww Orders</h3>
-<input type="file" id="orderUpload" accept="image/*">
-<div id="uploadStatus" class="small"></div>
 </div>
 
 <div class="card">
@@ -203,8 +237,6 @@ cursor.style.top=e.clientY+"px"
 
 let holdings = JSON.parse(localStorage.getItem("holdings")) || []
 
-/* render holdings */
-
 function renderHoldings(){
 
 const table=document.getElementById("holdingsTable")
@@ -230,77 +262,27 @@ table.innerHTML+=`
 
 }
 
-/* OCR upload */
+/* add order */
 
-document.getElementById("orderUpload").addEventListener("change",async function(){
+function addOrder(){
 
-const file=this.files[0]
+const symbol=document.getElementById("symbol").value.toUpperCase()
+const qty=parseInt(document.getElementById("qty").value)
+const price=parseFloat(document.getElementById("price").value)
 
-document.getElementById("uploadStatus").innerText="Reading order..."
-
-const result=await Tesseract.recognize(file,'eng')
-
-const text=result.data.text
-
-parseOrder(text)
-
-})
-
-/* parse order */
-
-function parseOrder(text){
-
-console.log("OCR TEXT:", text)
-
-/* detect stock */
-
-const stock = text.match(/ITC|SBIN|POWERGRID|RELIANCE|TRENT|ZOMATO/i)
-
-/* detect quantity */
-
-let qtyMatch =
-text.match(/Qty\s*[:\-]?\s*(\d+)/i) ||
-text.match(/Quantity\s*[:\-]?\s*(\d+)/i) ||
-text.match(/(\d+)\s*Qty/i)
-
-/* detect price (prefer avg price if available) */
-
-let priceMatch =
-text.match(/Avg\s*price\s*₹?\s*([0-9,.]+)/i) ||
-text.match(/Limit\s*at\s*₹?\s*([0-9,.]+)/i) ||
-text.match(/₹\s*([0-9,.]+)/)
-
-if(stock && qtyMatch && priceMatch){
-
-const symbol = stock[0].toUpperCase()
-const qty = parseInt(qtyMatch[1] || qtyMatch[2])
-const price = parseFloat(priceMatch[1].replace(",",""))
-
-addHolding(symbol, qty, price)
-
-document.getElementById("uploadStatus").innerText =
-`Added ${qty} ${symbol} @ ₹${price}`
-
-}else{
-
-document.getElementById("uploadStatus").innerText =
-"Could not detect order — try clearer screenshot"
-
+if(!symbol || !qty || !price){
+alert("Please fill all fields")
+return
 }
 
-}
-/* add or update holding */
-
-function addHolding(symbol,qty,price){
-
-let existing = holdings.find(h=>h.symbol===symbol)
+let existing=holdings.find(h=>h.symbol===symbol)
 
 if(existing){
 
-const totalShares = existing.qty + qty
+const totalShares=existing.qty+qty
 
-existing.avg = ((existing.avg*existing.qty)+(price*qty))/totalShares
-existing.qty = totalShares
+existing.avg=((existing.avg*existing.qty)+(price*qty))/totalShares
+existing.qty=totalShares
 
 }else{
 
@@ -315,6 +297,10 @@ avg:price
 localStorage.setItem("holdings",JSON.stringify(holdings))
 
 renderHoldings()
+
+document.getElementById("symbol").value=""
+document.getElementById("qty").value=""
+document.getElementById("price").value=""
 
 }
 
@@ -334,19 +320,19 @@ options:{plugins:{legend:{display:false}}}
 
 /* future projection */
 
-const sip = 2100
-const years = 10
-const annualReturn = 0.12
+const sip=2100
+const years=10
+const annualReturn=0.12
 
-const months = years*12
-const monthlyReturn = annualReturn/12
+const months=years*12
+const monthlyReturn=annualReturn/12
 
 let values=[]
 let total=0
 
 for(let i=1;i<=months;i++){
 
-total = total*(1+monthlyReturn) + sip
+total=total*(1+monthlyReturn)+sip
 
 if(i%12===0){
 values.push(Math.round(total))
