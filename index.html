@@ -210,73 +210,30 @@ LT:[3450,3650]
 
 async function fetchMarketData(){
 
+const key = "Z1DP1UB2798I7PAM"
+
 try{
 
-const response=await fetch(
-"https://api.allorigins.win/raw?url=https://query1.finance.yahoo.com/v7/finance/quote?symbols=ITC.NS,POWERGRID.NS,SBIN.NS,LT.NS,%5ENSEI"
+const response = await fetch(
+`https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=BSE:500875&apikey=${key}`
 )
 
-const data=await response.json()
+const data = await response.json()
 
-const q=data.quoteResponse.result
+const itc = data["Global Quote"]["05. price"]
 
-const itc=q[0].regularMarketPrice
-const pg=q[1].regularMarketPrice
-const sbi=q[2].regularMarketPrice
-const lt=q[3].regularMarketPrice
-const nifty=q[4].regularMarketPrice
+if(itc){
 
-updateDashboard(itc,pg,sbi,lt,nifty)
+document.getElementById("itcPrice").innerText = "₹"+itc
+document.getElementById("value").innerText = "₹"+itc
 
 }
 
-catch{
+}catch{
 
 console.log("Market feed unavailable")
 
 }
-
-}
-
-
-/* DASHBOARD UPDATE */
-
-function updateDashboard(itc,pg,sbi,lt,nifty){
-
-if(itc){
-document.getElementById("itcPrice").innerText="₹"+itc
-document.getElementById("value").innerText="₹"+itc
-}
-
-if(nifty){
-document.getElementById("nifty").innerText="NIFTY 50 : "+nifty
-}
-
-
-function check(price,rule,id,name){
-
-if(!price) return
-
-if(price>=rule[0] && price<=rule[1]){
-
-document.getElementById(id).innerText="BUY ZONE"
-
-document.getElementById("assistant").innerText=
-name+" entering accumulation zone."
-
-document.getElementById("suggest").innerText=name
-
-}else{
-
-document.getElementById(id).innerText="Monitoring"
-
-}
-
-}
-
-check(pg,rules.POWERGRID,"pg","Power Grid")
-check(sbi,rules.SBIN,"sbi","SBI")
-check(lt,rules.LT,"lt","L&T")
 
 }
 
