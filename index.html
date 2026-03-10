@@ -1,10 +1,11 @@
-
 <!DOCTYPE html>
 <html>
 <head>
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Portfolio OS v4</title>
+
+<title>Portfolio OS</title>
 
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -13,7 +14,7 @@
 
 body{
 margin:0;
-font-family:'Inter',-apple-system,BlinkMacSystemFont,"SF Pro Display",sans-serif;
+font-family:'Inter',sans-serif;
 background:#0f1115;
 color:#e6e8ec;
 overflow-x:hidden;
@@ -36,18 +37,6 @@ animation:float 15s infinite alternate;
 @keyframes float{
 0%{transform:translate(0,0)}
 100%{transform:translate(200px,120px)}
-}
-
-/* cursor */
-
-.cursor{
-position:fixed;
-width:18px;
-height:18px;
-border-radius:50%;
-background:rgba(120,150,255,.35);
-pointer-events:none;
-transform:translate(-50%,-50%);
 }
 
 .container{
@@ -86,13 +75,6 @@ transform:translateY(-4px);
 box-shadow:0 20px 60px rgba(0,0,0,.6);
 }
 
-h3{
-margin:0;
-font-size:15px;
-font-weight:500;
-color:#b8becc;
-}
-
 .stat{
 font-size:28px;
 font-weight:600;
@@ -106,55 +88,23 @@ opacity:.6;
 
 table{
 width:100%;
-border-collapse:collapse;
 margin-top:10px;
 }
 
-td,th{
+td{
 padding:6px 0;
-text-align:left;
-}
-
-th{
-opacity:.6;
-font-weight:500;
-}
-
-/* heatmap */
-
-.heatmap{
-display:grid;
-grid-template-columns:repeat(4,1fr);
-gap:8px;
-margin-top:10px;
-}
-
-.heat{
-padding:10px;
-border-radius:8px;
-background:#1f2430;
-font-size:12px;
-text-align:center;
-}
-
-.footer{
-text-align:center;
-margin-top:40px;
-font-size:12px;
-opacity:.5;
 }
 
 </style>
+
 </head>
 
 <body>
 
-<div class="cursor" id="cursor"></div>
-
 <div class="container">
 
 <div class="title">Portfolio Console</div>
-<div class="subtitle">Deepankar • Investor Command Center</div>
+<div class="subtitle">Deepankar • Investor OS</div>
 
 <div class="grid">
 
@@ -163,11 +113,13 @@ opacity:.5;
 <div class="stat" id="value">—</div>
 
 <table>
-<tr><th>Stock</th><th>Qty</th><th>Live</th></tr>
-<tr><td>ITC</td><td id="qty">1</td><td id="price">—</td></tr>
+<tr>
+<td>ITC</td>
+<td id="itcPrice">—</td>
+</tr>
 </table>
-
 </div>
+
 
 <div class="card">
 <h3>SIP Engine</h3>
@@ -175,117 +127,54 @@ opacity:.5;
 <canvas id="sipChart"></canvas>
 </div>
 
+
 <div class="card">
 <h3>Portfolio Allocation</h3>
 <canvas id="allocChart"></canvas>
 </div>
+
 
 <div class="card">
 <h3>Watchlist Scanner</h3>
 
 <table>
 
-<tr><th>Stock</th><th>Status</th></tr>
-
-<tr><td>Power Grid</td><td>Monitoring</td></tr>
-<tr><td>SBI</td><td>Monitoring</td></tr>
-<tr><td>Larsen & Toubro</td><td>Monitoring</td></tr>
+<tr><td>Power Grid</td><td id="pg">Monitoring</td></tr>
+<tr><td>SBI</td><td id="sbi">Monitoring</td></tr>
+<tr><td>L&T</td><td id="lt">Monitoring</td></tr>
 <tr><td>HDFC Bank</td><td>Monitoring</td></tr>
 <tr><td>ICICI Bank</td><td>Monitoring</td></tr>
 <tr><td>Bharti Airtel</td><td>Monitoring</td></tr>
 <tr><td>Reliance</td><td>Monitoring</td></tr>
 <tr><td>Trent</td><td>Growth Watch</td></tr>
-<tr><td>InterGlobe Aviation</td><td>Growth Watch</td></tr>
+<tr><td>IndiGo</td><td>Growth Watch</td></tr>
 <tr><td>Zomato</td><td>Growth Watch</td></tr>
 
 </table>
 
 </div>
 
+
 <div class="card">
 <h3>AI Assistant</h3>
-
-<div class="small">
-
-Monitoring market conditions...
-No accumulation signals detected.
-
+<div id="assistant" class="small">
+Scanning markets...
+</div>
 </div>
 
-</div>
 
 <div class="card">
-<h3>Buy Suggestion Engine</h3>
-
-<div class="stat">
-
-Power Grid
-
+<h3>Buy Suggestion</h3>
+<div class="stat" id="suggest">—</div>
 </div>
 
-<div class="small">
-
-Potential accumulation candidate based on predefined buy zones.
-
-</div>
-
-</div>
 
 <div class="card">
-<h3>Portfolio Growth Simulator</h3>
-
-<canvas id="growthChart"></canvas>
-
-</div>
-
-<div class="card">
-<h3>Sector Heatmap</h3>
-
-<div class="heatmap">
-
-<div class="heat">Banking</div>
-<div class="heat">Power</div>
-<div class="heat">Infra</div>
-<div class="heat">Telecom</div>
-<div class="heat">Consumer</div>
-<div class="heat">Energy</div>
-<div class="heat">Aviation</div>
-<div class="heat">Retail</div>
-
-</div>
-
-</div>
-
-<div class="card">
-
 <h3>Market Radar</h3>
-
-<div class="small">
-
-Monitoring broad market signals and volatility indicators.
-
+<div id="nifty" class="small">
+Loading market...
 </div>
-
 </div>
-
-<div class="card">
-
-<h3>News Intelligence</h3>
-
-<ul>
-
-<li>High-impact market news will appear here.</li>
-<li>Filtered for portfolio and watchlist relevance.</li>
-
-</ul>
-
-</div>
-
-</div>
-
-<div class="footer">
-
-Portfolio OS v4 • Calm Investing Interface
 
 </div>
 
@@ -293,58 +182,138 @@ Portfolio OS v4 • Calm Investing Interface
 
 <script>
 
-const cursor=document.getElementById("cursor");
+/* BUY ZONE RULES */
 
-document.addEventListener("mousemove",e=>{
-cursor.style.left=e.clientX+"px";
-cursor.style.top=e.clientY+"px";
-});
+const rules={
+POWERGRID:[285,295],
+SBIN:[700,740],
+LT:[3450,3650]
+}
 
-let qty=localStorage.getItem("itc_qty")||1;
-document.getElementById("qty").innerText=qty;
 
-async function fetchPrice(){
+/* FETCH MARKET DATA */
+
+async function fetchPrices(){
 
 try{
 
-let r=await fetch("https://query1.finance.yahoo.com/v7/finance/quote?symbols=ITC.NS");
-let data=await r.json();
+/* PRIMARY SOURCE (Yahoo) */
 
-let price=data.quoteResponse.result[0].regularMarketPrice;
+const yahoo=await fetch(
+"https://query1.finance.yahoo.com/v7/finance/quote?symbols=ITC.NS,POWERGRID.NS,SBIN.NS,LT.NS,%5ENSEI"
+)
 
-document.getElementById("price").innerText="₹"+price;
+const data=await yahoo.json()
 
-let value=(price*qty).toFixed(2);
+const q=data.quoteResponse.result
 
-document.getElementById("value").innerText="₹"+value;
+const itc=q[0].regularMarketPrice
+const pg=q[1].regularMarketPrice
+const sbi=q[2].regularMarketPrice
+const lt=q[3].regularMarketPrice
+const nifty=q[4].regularMarketPrice
 
-}catch{
+updateDashboard(itc,pg,sbi,lt,nifty)
 
-document.getElementById("price").innerText="—";
+}
+
+catch{
+
+/* FALLBACK SOURCE (NSE) */
+
+try{
+
+const nse=await fetch(
+"https://www.nseindia.com/api/quote-equity?symbol=ITC"
+)
+
+const data=await nse.json()
+
+const itc=data.priceInfo.lastPrice
+
+updateDashboard(itc,null,null,null,null)
+
+}
+
+catch{
+
+console.log("market data unavailable")
 
 }
 
 }
 
-fetchPrice();
-setInterval(fetchPrice,20000);
+}
+
+
+/* UPDATE DASHBOARD */
+
+function updateDashboard(itc,pg,sbi,lt,nifty){
+
+if(itc){
+document.getElementById("itcPrice").innerText="₹"+itc
+document.getElementById("value").innerText="₹"+itc
+}
+
+if(nifty){
+document.getElementById("nifty").innerText="NIFTY 50 : "+nifty
+}
+
+
+/* BUY ZONE CHECK */
+
+function check(price,rule,id,name){
+
+if(!price) return
+
+if(price>=rule[0] && price<=rule[1]){
+
+document.getElementById(id).innerText="BUY ZONE"
+document.getElementById("assistant").innerText=name+" entering buy zone."
+document.getElementById("suggest").innerText=name
+
+}
+
+else{
+
+document.getElementById(id).innerText="Monitoring"
+
+}
+
+}
+
+check(pg,rules.POWERGRID,"pg","Power Grid")
+check(sbi,rules.SBIN,"sbi","SBI")
+check(lt,rules.LT,"lt","L&T")
+
+}
+
+
+/* AUTO REFRESH */
+
+fetchPrices()
+setInterval(fetchPrices,20000)
+
+
+
+/* CHARTS */
 
 new Chart(document.getElementById("sipChart"),{
 type:"bar",
-data:{labels:["UTI Nifty","ICICI Next 50","Nippon Multi Cap"],datasets:[{data:[1300,600,200]}]},
+data:{
+labels:["UTI Nifty","ICICI Next 50","Nippon Multi Cap"],
+datasets:[{data:[1300,600,200]}]
+},
 options:{plugins:{legend:{display:false}}}
-});
+})
 
 new Chart(document.getElementById("allocChart"),{
 type:"doughnut",
-data:{labels:["Mutual Funds","Stocks"],datasets:[{data:[2100,306]}]}
-});
-
-new Chart(document.getElementById("growthChart"),{
-type:"line",
-data:{labels:["1Y","3Y","5Y","10Y"],datasets:[{data:[25200,75600,126000,252000]}]},
-options:{plugins:{legend:{display:false}}}
-});
+data:{
+labels:["Mutual Funds","Stocks"],
+datasets:[{data:[2100,306]}]
+}
+})
 
 </script>
 
