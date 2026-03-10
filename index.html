@@ -20,8 +20,6 @@ color:#e6e9ef;
 overflow-x:hidden;
 }
 
-/* background glow */
-
 body::before{
 content:'';
 position:fixed;
@@ -39,8 +37,6 @@ animation:float 14s infinite alternate;
 100%{transform:translate(250px,180px)}
 }
 
-/* cursor glow */
-
 .cursor{
 position:fixed;
 width:420px;
@@ -49,17 +45,12 @@ pointer-events:none;
 background:radial-gradient(circle,#5a8cff33,transparent 70%);
 transform:translate(-50%,-50%);
 filter:blur(80px);
-z-index:0;
 }
-
-/* layout */
 
 .container{
 max-width:1300px;
 margin:auto;
 padding:40px 24px;
-position:relative;
-z-index:1;
 }
 
 .title{
@@ -68,7 +59,6 @@ font-weight:600;
 }
 
 .subtitle{
-font-size:13px;
 opacity:.6;
 margin-bottom:30px;
 }
@@ -83,27 +73,11 @@ gap:20px;
 background:#12161f;
 border-radius:18px;
 padding:20px;
-box-shadow:0 15px 60px rgba(0,0,0,.6);
-transition:.3s;
-}
-
-.card:hover{
-transform:translateY(-6px);
 }
 
 .stat{
 font-size:24px;
 font-weight:600;
-margin-top:6px;
-}
-
-table{
-width:100%;
-margin-top:10px;
-}
-
-td{
-padding:6px 0;
 }
 
 input{
@@ -126,18 +100,20 @@ color:white;
 cursor:pointer;
 }
 
+table{
+width:100%;
+}
+
 .heatmap{
 display:grid;
 grid-template-columns:repeat(3,1fr);
-gap:8px;
-margin-top:10px;
+gap:6px;
 }
 
 .heatbox{
 padding:10px;
 border-radius:8px;
 text-align:center;
-font-size:12px;
 }
 
 .green{background:#1f8a4c}
@@ -165,7 +141,7 @@ font-size:12px;
 
 <div class="card">
 <h3>Current Portfolio Value</h3>
-<div class="stat" id="currentValue">₹0</div>
+<div class="stat" id="current">₹0</div>
 <div id="profit"></div>
 </div>
 
@@ -174,19 +150,19 @@ font-size:12px;
 
 <input id="symbol" placeholder="Stock (ITC)">
 <input id="qty" placeholder="Quantity">
-<input id="price" placeholder="Buy price">
+<input id="price" placeholder="Buy Price">
 
 <button onclick="addOrder()">Add Order</button>
 
 </div>
 
 <div class="card">
-<h3>Update Last Price</h3>
+<h3>Update Market Price</h3>
 
-<input id="priceSymbol" placeholder="Stock (ITC)">
-<input id="lastPrice" placeholder="Latest price">
+<input id="psymbol" placeholder="Stock (ITC)">
+<input id="marketPrice" placeholder="Latest Price">
 
-<button onclick="updatePrice()">Update</button>
+<button onclick="updatePrice()">Update Price</button>
 
 </div>
 
@@ -202,8 +178,8 @@ font-size:12px;
 
 <div class="card">
 <h3>SIP Engine</h3>
-<div class="stat">₹2100 / month</div>
-<p>Next SIP: <span id="nextSip"></span></p>
+<div>₹2100 monthly</div>
+<div>Next SIP: <span id="nextSip"></span></div>
 <canvas id="sipChart"></canvas>
 </div>
 
@@ -230,9 +206,9 @@ font-size:12px;
 </div>
 
 <div class="card">
-<h3>Future Wealth Projection</h3>
+<h3>Future Portfolio Projection</h3>
 <canvas id="futureChart"></canvas>
-<p id="ageProjection"></p>
+<div id="ageProjection"></div>
 </div>
 
 </div>
@@ -241,27 +217,21 @@ font-size:12px;
 
 <script>
 
-/* cursor */
-
 const cursor=document.getElementById("cursor")
-
 document.addEventListener("mousemove",e=>{
 cursor.style.left=e.clientX+"px"
 cursor.style.top=e.clientY+"px"
 })
 
-/* storage */
-
 let holdings=JSON.parse(localStorage.getItem("holdings"))||[]
-let prices=JSON.parse(localStorage.getItem("prices"))||[]
+let prices=JSON.parse(localStorage.getItem("prices"))||{}
+let history=JSON.parse(localStorage.getItem("history"))||[]
 
 const buyZones={
 POWERGRID:[285,295],
 SBIN:[700,740],
 LT:[3450,3650]
 }
-
-/* add order */
 
 function addOrder(){
 
@@ -273,9 +243,9 @@ let existing=holdings.find(h=>h.symbol===symbol)
 
 if(existing){
 
-const totalShares=existing.qty+qty
-existing.avg=((existing.avg*existing.qty)+(price*qty))/totalShares
-existing.qty=totalShares
+let total=existing.qty+qty
+existing.avg=((existing.avg*existing.qty)+(price*qty))/total
+existing.qty=total
 
 }else{
 
@@ -283,18 +253,24 @@ holdings.push({symbol,qty,avg:price})
 
 }
 
+history.push({
+symbol,
+qty,
+price,
+date:new Date().toISOString()
+})
+
 localStorage.setItem("holdings",JSON.stringify(holdings))
+localStorage.setItem("history",JSON.stringify(history))
 
 render()
 
 }
 
-/* update price */
-
 function updatePrice(){
 
-const symbol=document.getElementById("priceSymbol").value.toUpperCase()
-const price=parseFloat(document.getElementById("lastPrice").value)
+const symbol=document.getElementById("psymbol").value.toUpperCase()
+const price=parseFloat(document.getElementById("marketPrice").value)
 
 prices[symbol]=price
 
@@ -303,8 +279,6 @@ localStorage.setItem("prices",JSON.stringify(prices))
 render()
 
 }
-
-/* render dashboard */
 
 function render(){
 
@@ -316,10 +290,9 @@ table.innerHTML=""
 
 holdings.forEach(h=>{
 
+let last=prices[h.symbol] || h.avg
+
 invested+=h.qty*h.avg
-
-let last=prices[h.symbol]||0
-
 current+=h.qty*last
 
 table.innerHTML+=`
@@ -327,36 +300,85 @@ table.innerHTML+=`
 <td>${h.symbol}</td>
 <td>${h.qty}</td>
 <td>₹${h.avg}</td>
-<td>₹${last||"-"}</td>
+<td>₹${last}</td>
 </tr>
 `
 
 })
 
 document.getElementById("invested").innerText="₹"+invested.toFixed(2)
-document.getElementById("currentValue").innerText="₹"+current.toFixed(2)
+document.getElementById("current").innerText="₹"+current.toFixed(2)
 
-const diff=current-invested
+let diff=current-invested
 
 document.getElementById("profit").innerText=
 (diff>=0?"+":"")+diff.toFixed(2)
 
-/* allocation chart */
+renderTimeline()
+scanBuyZones()
 
-new Chart(document.getElementById("allocChart"),{
-type:"doughnut",
-data:{
-labels:["Stocks","Mutual Funds"],
-datasets:[{
-data:[invested,2100],
-backgroundColor:["#4da3ff","#ff5c7a"]
-}]
 }
+
+function renderTimeline(){
+
+const timeline=document.getElementById("timeline")
+timeline.innerHTML=""
+
+let months={}
+
+history.forEach(h=>{
+
+let m=new Date(h.date).toLocaleString("default",{month:"long",year:"numeric"})
+
+if(!months[m]) months[m]=[]
+
+months[m].push(h)
+
 })
 
+for(let m in months){
+
+timeline.innerHTML+=`<b>${m}</b><br>`
+
+months[m].forEach(h=>{
+timeline.innerHTML+=`${h.symbol} ${h.qty} @ ₹${h.price}<br>`
+})
+
+timeline.innerHTML+="<br>"
+
 }
 
-/* SIP chart */
+}
+
+function scanBuyZones(){
+
+const signals=document.getElementById("buySignals")
+signals.innerHTML=""
+
+for(let stock in buyZones){
+
+let price=prices[stock]
+
+if(!price) continue
+
+let zone=buyZones[stock]
+
+if(price>=zone[0] && price<=zone[1]){
+
+signals.innerHTML+=`${stock} entering buy zone<br>`
+
+}
+
+}
+
+if(signals.innerHTML==="") signals.innerHTML="No stocks in buy zone"
+
+}
+
+const today=new Date()
+let next=new Date(today.getFullYear(),today.getMonth(),10)
+if(today.getDate()>10) next.setMonth(next.getMonth()+1)
+document.getElementById("nextSip").innerText=next.toDateString()
 
 new Chart(document.getElementById("sipChart"),{
 type:"bar",
@@ -366,40 +388,26 @@ datasets:[{
 data:[1300,600,200],
 backgroundColor:"#4da3ff"
 }]
-},
-options:{plugins:{legend:{display:false}}}
+}
 })
 
-/* SIP next date */
-
-const today=new Date()
-let next=new Date(today.getFullYear(),today.getMonth(),10)
-
-if(today.getDate()>10) next.setMonth(next.getMonth()+1)
-
-document.getElementById("nextSip").innerText=next.toDateString()
-
-/* future projection */
-
-const sip=2100
-const annual=0.12
+let sip=2100
+let r=0.12/12
 let total=0
 let vals=[]
 
-for(let y=1;y<=20;y++){
+for(let i=0;i<240;i++){
 
-for(let m=0;m<12;m++){
-total=total*(1+annual/12)+sip
-}
+total=total*(1+r)+sip
 
-vals.push(Math.round(total))
+if(i%12==0) vals.push(Math.round(total))
 
 }
 
 new Chart(document.getElementById("futureChart"),{
 type:"line",
 data:{
-labels:["1Y","2Y","3Y","4Y","5Y","6Y","7Y","8Y","9Y","10Y","11Y","12Y","13Y","14Y","15Y","16Y","17Y","18Y","19Y","20Y"],
+labels:Array.from({length:20},(_,i)=>i+1),
 datasets:[{
 data:vals,
 borderColor:"#4da3ff",
@@ -409,7 +417,7 @@ tension:.3
 })
 
 document.getElementById("ageProjection").innerText=
-"Projected value by 40–50 if SIP continues."
+"Projection assumes ₹2100 monthly SIP until age 40–50."
 
 render()
 
