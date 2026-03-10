@@ -237,9 +237,14 @@ LT:[3450,3650]
 
 function addStock(){
 
-let symbol=document.getElementById("symbol").value.toUpperCase()
+let symbol=document.getElementById("symbol").value.trim().toUpperCase()
 let qty=parseFloat(document.getElementById("qty").value)
 let price=parseFloat(document.getElementById("price").value)
+
+if(!symbol || isNaN(qty) || isNaN(price)){
+alert("Enter valid stock details")
+return
+}
 
 let e=stocks.find(s=>s.symbol===symbol)
 
@@ -251,16 +256,19 @@ e.qty=total
 
 }else{
 
-stocks.push({symbol,qty,avg:price})
+stocks.push({symbol:symbol,qty:qty,avg:price})
 
 }
 
-history.push({type:"stock",symbol,qty,price,date:new Date()})
+history.push({type:"stock",symbol:symbol,qty:qty,price:price,date:new Date()})
+
+document.getElementById("symbol").value=""
+document.getElementById("qty").value=""
+document.getElementById("price").value=""
 
 save()
 
 }
-
 /* UPDATE PRICE */
 
 function updatePrice(){
