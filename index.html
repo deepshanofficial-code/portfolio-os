@@ -8,7 +8,6 @@
 <title>Portfolio OS</title>
 
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
 
@@ -37,16 +36,6 @@ animation:float 16s infinite alternate;
 100%{transform:translate(280px,200px)}
 }
 
-.cursor{
-position:fixed;
-width:380px;
-height:380px;
-pointer-events:none;
-background:radial-gradient(circle,#5a8cff33,transparent 70%);
-transform:translate(-50%,-50%);
-filter:blur(80px);
-}
-
 .container{
 max-width:1300px;
 margin:auto;
@@ -60,7 +49,7 @@ gap:20px;
 }
 
 .card{
-background:rgba(18,22,31,.8);
+background:rgba(18,22,31,.85);
 backdrop-filter:blur(16px);
 border-radius:18px;
 padding:20px;
@@ -92,25 +81,16 @@ color:white;
 cursor:pointer;
 }
 
-.rowCharts{
-display:grid;
-grid-template-columns:1fr 1fr;
-gap:20px;
-margin-top:20px;
-}
-
-canvas{
-max-height:240px;
-}
-
 table{
 width:100%;
+margin-top:10px;
 }
 
 .quote{
-margin-top:30px;
-opacity:.7;
+margin-top:40px;
+opacity:.75;
 font-style:italic;
+text-align:center;
 }
 
 </style>
@@ -118,8 +98,6 @@ font-style:italic;
 </head>
 
 <body>
-
-<div class="cursor" id="cursor"></div>
 
 <div class="container">
 
@@ -158,7 +136,7 @@ font-style:italic;
 </select>
 
 <input id="name" placeholder="Stock or Fund Name">
-<input id="qty" placeholder="Qty or SIP amount">
+<input id="amount" placeholder="Qty (Stock) or SIP amount">
 <input id="price" placeholder="Buy price / NAV">
 <input id="sipDate" type="date">
 
@@ -188,204 +166,172 @@ font-style:italic;
 
 </div>
 
-<div class="rowCharts">
-
-<div class="card">
-<h3>Portfolio Allocation</h3>
-<canvas id="allocChart"></canvas>
-</div>
-
-<div class="card">
-<h3>Future Wealth</h3>
-<canvas id="futureChart"></canvas>
-</div>
-
-</div>
-
 <div class="quote" id="quote"></div>
 
 </div>
 
 <script>
 
-const cursor=document.getElementById("cursor")
-document.addEventListener("mousemove",e=>{
-cursor.style.left=e.clientX+"px"
-cursor.style.top=e.clientY+"px"
-})
+/* STORAGE */
 
-let stocks=JSON.parse(localStorage.getItem("stocks"))||[]
-let funds=JSON.parse(localStorage.getItem("funds"))||[]
-let prices=JSON.parse(localStorage.getItem("prices"))||{}
+let stocks = JSON.parse(localStorage.getItem("stocks")) || []
+let funds = JSON.parse(localStorage.getItem("funds")) || []
+let prices = JSON.parse(localStorage.getItem("prices")) || {}
+let timeline = JSON.parse(localStorage.getItem("timeline")) || []
+
+/* SAVE */
 
 function save(){
 localStorage.setItem("stocks",JSON.stringify(stocks))
 localStorage.setItem("funds",JSON.stringify(funds))
 localStorage.setItem("prices",JSON.stringify(prices))
+localStorage.setItem("timeline",JSON.stringify(timeline))
 render()
 }
+
+/* BUY */
 
 function buy(){
 
 let type=document.getElementById("assetType").value
 let name=document.getElementById("name").value.trim()
-let qty=parseFloat(document.getElementById("qty").value)
+let amount=parseFloat(document.getElementById("amount").value)
 let price=parseFloat(document.getElementById("price").value)
 let sipDate=document.getElementById("sipDate").value
 
-if(!name||isNaN(qty)||isNaN(price)) return
+if(!name || isNaN(amount) || isNaN(price)) return
 
 if(type==="stock"){
-stocks.push({name,qty,price})
+stocks.push({name,qty:amount,buy:price})
+timeline.push(`${name} BUY ${amount} @ ₹${price}`)
 }
 
 if(type==="mf"){
-funds.push({name,sip:qty,nav:price,start:sipDate})
+funds.push({name,sip:amount,start:sipDate})
+timeline.push(`${name} SIP ₹${amount} started`)
 }
 
 save()
 
 }
+
+/* SELL */
 
 function sell(){
 
 let name=document.getElementById("sellAsset").value
 let qty=parseFloat(document.getElementById("sellQty").value)
+let price=parseFloat(document.getElementById("sellPrice").value)
 
 let s=stocks.find(x=>x.name===name)
+if(!s || isNaN(qty)) return
 
-if(!s) return
-
-s.qty-=qty
+s.qty -= qty
+timeline.push(`${name} SELL ${qty} @ ₹${price}`)
 
 if(s.qty<=0){
-stocks=stocks.filter(x=>x.name!==name)
+stocks = stocks.filter(x=>x.name!==name)
 }
 
 save()
 
 }
+
+/* PRICE UPDATE */
 
 function updatePrice(){
 
 let name=document.getElementById("priceAsset").value
-let p=parseFloat(document.getElementById("marketPrice").value)
+let price=parseFloat(document.getElementById("marketPrice").value)
 
-if(isNaN(p)) return
+if(isNaN(price)) return
 
-prices[name]=p
-
+prices[name]=price
 save()
 
 }
 
-function monthsBetween(start){
+/* SIP CALC */
+
+function monthsPassed(start){
 
 let s=new Date(start)
 let now=new Date()
 
-return (now.getFullYear()-s.getFullYear())*12+(now.getMonth()-s.getMonth())+1
+return (now.getFullYear()-s.getFullYear())*12 + (now.getMonth()-s.getMonth()) + 1
 
 }
+
+/* RENDER */
 
 function render(){
 
 let invested=0
 let current=0
-let holdings={}
-let timeline=""
+let holdingsHTML=""
+
+/* STOCKS */
 
 stocks.forEach(s=>{
 
-holdings[s.name]=(holdings[s.name]||0)+s.qty
+let investedStock=s.qty*s.buy
+let market=prices[s.name] || s.buy
+let currentStock=s.qty*market
 
-let mp=prices[s.name]||s.price
+invested+=investedStock
+current+=currentStock
 
-invested+=s.qty*s.price
-current+=s.qty*mp
-
-timeline+=`${s.name} BUY ${s.qty} @ ₹${s.price}<br>`
+holdingsHTML += `<tr><td>Stock</td><td>${s.name}</td><td>${s.qty}</td></tr>`
 
 })
 
+/* MUTUAL FUNDS */
+
 funds.forEach(f=>{
 
-let m=monthsBetween(f.start)
+let m=monthsPassed(f.start)
 let investedMF=m*f.sip
 
 invested+=investedMF
 current+=investedMF
 
-holdings[f.name]="₹"+investedMF
-
-timeline+=`${f.name} SIP ₹${f.sip} × ${m} months<br>`
+holdingsHTML += `<tr><td>MF</td><td>${f.name}</td><td>₹${investedMF}</td></tr>`
 
 })
 
-let table=document.getElementById("holdings")
-table.innerHTML=""
-
-for(let a in holdings){
-table.innerHTML+=`<tr><td>${a}</td><td>${holdings[a]}</td></tr>`
-}
-
-document.getElementById("sellAsset").innerHTML=stocks.map(s=>`<option>${s.name}</option>`).join("")
-document.getElementById("priceAsset").innerHTML=[...stocks.map(s=>s.name),...funds.map(f=>f.name)].map(a=>`<option>${a}</option>`).join("")
+document.getElementById("holdings").innerHTML=holdingsHTML
 
 document.getElementById("invested").innerText="₹"+invested.toFixed(2)
 document.getElementById("current").innerText="₹"+current.toFixed(2)
 document.getElementById("profit").innerText="P/L ₹"+(current-invested).toFixed(2)
 
-document.getElementById("timeline").innerHTML=timeline
+/* DROPDOWNS */
 
-if(window.allocChart) window.allocChart.destroy()
-if(window.futureChart) window.futureChart.destroy()
+document.getElementById("sellAsset").innerHTML=
+stocks.map(s=>`<option>${s.name}</option>`).join("")
 
-window.allocChart=new Chart(document.getElementById("allocChart"),{
-type:"doughnut",
-data:{
-labels:["Invested","Profit"],
-datasets:[{
-data:[invested,current-invested],
-backgroundColor:["#4da3ff","#ff5c7a"]
-}]
-},
-options:{plugins:{legend:{display:false}}}
-})
+document.getElementById("priceAsset").innerHTML=
+[...stocks.map(s=>s.name),...funds.map(f=>f.name)]
+.map(x=>`<option>${x}</option>`).join("")
 
-let sip=2100
-let r=0.12/12
-let total=0
-let vals=[]
+/* TIMELINE */
 
-for(let i=0;i<240;i++){
-total=total*(1+r)+sip
-if(i%12===0) vals.push(Math.round(total))
+document.getElementById("timeline").innerHTML=timeline.slice().reverse().join("<br>")
+
 }
 
-window.futureChart=new Chart(document.getElementById("futureChart"),{
-type:"line",
-data:{
-labels:Array.from({length:20},(_,i)=>i+1),
-datasets:[{
-data:vals,
-borderColor:"#4da3ff",
-tension:.3
-}]
-},
-options:{plugins:{legend:{display:false}}}
-})
+/* QUOTES */
 
 const quotes=[
-"Compounding quietly rewrites your future.",
-"Markets fluctuate. Discipline compounds.",
-"Every SIP is a vote for your future self.",
-"Time in market beats timing the market."
+"Compounding is just patience wearing a lab coat.",
+"SIP is the financial version of gravity.",
+"Your future self is quietly cheering every SIP.",
+"Markets panic. Compounding does not.",
+"Every rupee invested is a tiny employee working forever."
 ]
 
-document.getElementById("quote").innerText=quotes[Math.floor(Math.random()*quotes.length)]
-
-}
+document.getElementById("quote").innerText =
+quotes[Math.floor(Math.random()*quotes.length)]
 
 render()
 
