@@ -129,7 +129,7 @@ width:100%;
 <input id="qty" placeholder="Qty">
 <input id="price" placeholder="Buy Price">
 
-<button onclick="addStock()">Add</button>
+<button id="addStockBtn">Add</button>
 
 </div>
 
@@ -205,25 +205,49 @@ const mfs=[
 
 function addStock(){
 
-let symbol=document.getElementById("symbol").value.toUpperCase()
-let qty=parseFloat(document.getElementById("qty").value)
-let price=parseFloat(document.getElementById("price").value)
+let symbol = document.getElementById("symbol").value.trim().toUpperCase()
 
-let e=stocks.find(s=>s.symbol===symbol)
+let qty = Number(document.getElementById("qty").value)
+let price = Number(document.getElementById("price").value)
 
-if(e){
+if(!symbol || !qty || !price){
+alert("Enter valid stock details")
+return
+}
 
-let total=e.qty+qty
-e.avg=((e.avg*e.qty)+(price*qty))/total
-e.qty=total
+let existing = stocks.find(s => s.symbol === symbol)
+
+if(existing){
+
+let totalQty = existing.qty + qty
+existing.avg = ((existing.avg * existing.qty) + (price * qty)) / totalQty
+existing.qty = totalQty
 
 }else{
 
-stocks.push({symbol,qty,avg:price})
+stocks.push({
+symbol: symbol,
+qty: qty,
+avg: price
+})
 
 }
 
-history.push({type:"stock",symbol,qty,price,date:new Date()})
+/* add to monthly activity */
+
+history.push({
+type:"stock",
+symbol:symbol,
+qty:qty,
+price:price,
+date:new Date()
+})
+
+/* clear inputs (important for iOS) */
+
+document.getElementById("symbol").value=""
+document.getElementById("qty").value=""
+document.getElementById("price").value=""
 
 save()
 
