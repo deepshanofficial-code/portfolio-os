@@ -268,7 +268,7 @@ save()
 
 }
 
-/* price update */
+/* UPDATE PRICE */
 
 function updatePrice(){
 
@@ -281,7 +281,31 @@ save()
 
 }
 
-/* save */
+/* EDIT HOLDING */
+
+function edit(asset){
+
+let newQty=parseFloat(prompt("Enter correct quantity"))
+let newPrice=parseFloat(prompt("Enter correct buy price"))
+
+if(isNaN(newQty)||isNaN(newPrice)) return
+
+ledger=ledger.filter(t=>t.name!==asset)
+
+ledger.push({
+type:"buy",
+asset:"edit",
+name:asset,
+qty:newQty,
+price:newPrice,
+date:new Date()
+})
+
+save()
+
+}
+
+/* SAVE */
 
 function save(){
 
@@ -292,7 +316,7 @@ render()
 
 }
 
-/* render */
+/* RENDER */
 
 function render(){
 
@@ -364,14 +388,19 @@ document.getElementById("profit").innerText="P/L ₹"+(current-invested).toFixed
 
 document.getElementById("timeline").innerHTML=timeline
 
+/* destroy old charts */
+
+if(window.allocChart) window.allocChart.destroy()
+if(window.futureChart) window.futureChart.destroy()
+
 /* allocation chart */
 
-let alloc=new Chart(document.getElementById("allocChart"),{
+window.allocChart=new Chart(document.getElementById("allocChart"),{
 
 type:"doughnut",
 
 data:{
-labels:["Equity","Funds"],
+labels:["Invested","Profit"],
 datasets:[{
 data:[invested,current-invested],
 backgroundColor:["#4da3ff","#ff5c7a"]
@@ -397,7 +426,7 @@ if(i%12===0) vals.push(Math.round(total))
 
 }
 
-new Chart(document.getElementById("futureChart"),{
+window.futureChart=new Chart(document.getElementById("futureChart"),{
 
 type:"line",
 
@@ -414,13 +443,13 @@ options:{plugins:{legend:{display:false}}}
 
 })
 
-/* nerd quotes */
+/* quotes */
 
 const quotes=[
 "Compounding quietly rewrites your future.",
 "Markets fluctuate. Discipline compounds.",
 "Every SIP is a vote for your future self.",
-"Time in market > timing the market."
+"Time in market beats timing the market."
 ]
 
 document.getElementById("quote").innerText=quotes[Math.floor(Math.random()*quotes.length)]
