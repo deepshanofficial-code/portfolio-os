@@ -1,5 +1,5 @@
+```html
 <!DOCTYPE html>
-
 <html>
 <head>
 
@@ -19,6 +19,8 @@ color:#e6e9ef;
 overflow-x:hidden;
 }
 
+/* animated background */
+
 body::before{
 content:'';
 position:fixed;
@@ -28,7 +30,8 @@ background:radial-gradient(circle,#3a7bff33,transparent 70%);
 top:-200px;
 left:-200px;
 filter:blur(120px);
-animation:float 16s infinite alternate;
+animation:float 18s infinite alternate;
+z-index:0;
 }
 
 @keyframes float{
@@ -36,10 +39,27 @@ animation:float 16s infinite alternate;
 100%{transform:translate(280px,200px)}
 }
 
+/* cursor glow */
+
+.cursor-glow{
+position:fixed;
+width:420px;
+height:420px;
+pointer-events:none;
+background:radial-gradient(circle,#4da3ff22,transparent 70%);
+filter:blur(90px);
+transform:translate(-50%,-50%);
+z-index:0;
+}
+
+/* layout */
+
 .container{
 max-width:1300px;
 margin:auto;
 padding:40px;
+position:relative;
+z-index:1;
 }
 
 .grid{
@@ -61,6 +81,8 @@ font-size:24px;
 font-weight:600;
 }
 
+/* inputs */
+
 input,select{
 width:100%;
 padding:8px;
@@ -81,10 +103,31 @@ color:white;
 cursor:pointer;
 }
 
-table{
+/* holdings table */
+
+#holdings{
 width:100%;
 margin-top:10px;
 }
+
+#holdings tr{
+border-bottom:1px solid rgba(255,255,255,.06);
+}
+
+#holdings td{
+padding:6px 4px;
+font-size:14px;
+}
+
+/* timeline */
+
+#timeline{
+font-size:13px;
+line-height:1.7;
+opacity:.85;
+}
+
+/* quote */
 
 .quote{
 margin-top:40px;
@@ -94,10 +137,11 @@ text-align:center;
 }
 
 </style>
-
 </head>
 
 <body>
+
+<div class="cursor-glow"></div>
 
 <div class="container">
 
@@ -148,7 +192,9 @@ text-align:center;
 
 <h3>Sell Asset</h3>
 
-<select id="sellAsset"></select> <input id="sellQty" placeholder="Qty"> <input id="sellPrice" placeholder="Sell price">
+<select id="sellAsset"></select>
+<input id="sellQty" placeholder="Qty">
+<input id="sellPrice" placeholder="Sell price">
 
 <button onclick="sell()">Sell</button>
 
@@ -158,7 +204,8 @@ text-align:center;
 
 <h3>Update Market Price</h3>
 
-<select id="priceAsset"></select> <input id="marketPrice" placeholder="Latest price">
+<select id="priceAsset"></select>
+<input id="marketPrice" placeholder="Latest price">
 
 <button onclick="updatePrice()">Update</button>
 
@@ -171,6 +218,15 @@ text-align:center;
 </div>
 
 <script>
+
+/* cursor glow */
+
+const glow=document.querySelector(".cursor-glow")
+
+document.addEventListener("mousemove",e=>{
+glow.style.left=e.clientX+"px"
+glow.style.top=e.clientY+"px"
+})
 
 /* STORAGE */
 
@@ -203,12 +259,12 @@ if(!name || isNaN(amount) || isNaN(price)) return
 
 if(type==="stock"){
 stocks.push({name,qty:amount,buy:price})
-timeline.push(`${name} BUY ${amount} @ ₹${price}`)
+timeline.push(`📈 ${name} bought • ${amount} @ ₹${price}`)
 }
 
 if(type==="mf"){
 funds.push({name,sip:amount,start:sipDate})
-timeline.push(`${name} SIP ₹${amount} started`)
+timeline.push(`🔁 ${name} SIP started • ₹${amount}`)
 }
 
 save()
@@ -227,7 +283,8 @@ let s=stocks.find(x=>x.name===name)
 if(!s || isNaN(qty)) return
 
 s.qty -= qty
-timeline.push(`${name} SELL ${qty} @ ₹${price}`)
+
+timeline.push(`📉 ${name} sold • ${qty} @ ₹${price}`)
 
 if(s.qty<=0){
 stocks = stocks.filter(x=>x.name!==name)
@@ -281,7 +338,13 @@ let currentStock=s.qty*market
 invested+=investedStock
 current+=currentStock
 
-holdingsHTML += `<tr><td>Stock</td><td>${s.name}</td><td>${s.qty}</td></tr>`
+holdingsHTML += `
+<tr>
+<td style="opacity:.6">STOCK</td>
+<td>${s.name}</td>
+<td style="text-align:right">${s.qty}</td>
+</tr>
+`
 
 })
 
@@ -295,7 +358,13 @@ let investedMF=m*f.sip
 invested+=investedMF
 current+=investedMF
 
-holdingsHTML += `<tr><td>MF</td><td>${f.name}</td><td>₹${investedMF}</td></tr>`
+holdingsHTML += `
+<tr>
+<td style="opacity:.6">MF</td>
+<td>${f.name}</td>
+<td style="text-align:right">₹${investedMF}</td>
+</tr>
+`
 
 })
 
@@ -303,7 +372,13 @@ document.getElementById("holdings").innerHTML=holdingsHTML
 
 document.getElementById("invested").innerText="₹"+invested.toFixed(2)
 document.getElementById("current").innerText="₹"+current.toFixed(2)
-document.getElementById("profit").innerText="P/L ₹"+(current-invested).toFixed(2)
+
+/* colored P/L */
+
+let pl=current-invested
+let color=pl>=0?"#4ade80":"#ff5c7a"
+
+document.getElementById("profit").innerHTML=`<span style="color:${color}">P/L ₹${pl.toFixed(2)}</span>`
 
 /* DROPDOWNS */
 
@@ -339,3 +414,4 @@ render()
 
 </body>
 </html>
+```
