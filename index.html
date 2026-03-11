@@ -5,40 +5,63 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Portfolio Input</title>
+<title>Portfolio OS</title>
 
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
 
 body{
+margin:0;
 font-family:Inter;
 background:#05070c;
 color:#e6e9ef;
-margin:0;
+}
+
+.container{
+max-width:1200px;
+margin:auto;
 padding:40px;
+}
+
+h1{
+margin-bottom:20px;
+}
+
+.section{
+margin-bottom:40px;
+}
+
+.grid{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+gap:20px;
 }
 
 .card{
 background:#12161f;
-padding:20px;
 border-radius:16px;
-margin-bottom:20px;
+padding:20px;
+}
+
+.full{
+grid-column:1/-1;
 }
 
 input{
 width:100%;
 padding:10px;
-margin-top:8px;
+margin-top:6px;
 margin-bottom:10px;
 background:#0e1219;
 border:none;
-color:white;
 border-radius:8px;
+color:white;
 }
 
 button{
-padding:10px 16px;
+padding:10px;
 background:#4da3ff;
 border:none;
 border-radius:8px;
@@ -46,16 +69,35 @@ color:white;
 cursor:pointer;
 }
 
+.stat{
+font-size:24px;
+font-weight:600;
+}
+
+table{
+width:100%;
+}
+
 </style>
 </head>
 
 <body>
 
-<h1>Portfolio Input Console</h1>
+<div class="container">
+
+<h1>Portfolio OS</h1>
+
+<!-- INPUT SECTION -->
+
+<div class="section">
+
+<h2>Portfolio Input Console</h2>
+
+<div class="grid">
 
 <div class="card">
 
-<h3>Add Stock Purchase</h3>
+<h3>Add Stock</h3>
 
 <input id="stockSymbol" placeholder="Stock Symbol">
 <input id="stockQty" placeholder="Quantity">
@@ -68,25 +110,72 @@ cursor:pointer;
 
 <div class="card">
 
-<h3>Add Mutual Fund SIP</h3>
+<h3>Add MF SIP</h3>
 
 <input id="mfName" placeholder="Fund Name">
 <input id="mfAmount" placeholder="Monthly SIP Amount">
 <input type="date" id="mfStart">
-<input id="mfNAV" placeholder="Current NAV (optional)">
 
-<button onclick="addMF()">Add MF SIP</button>
+<button onclick="addMF()">Add MF</button>
 
 </div>
 
 <div class="card">
 
-<h3>Update Stock Market Price</h3>
+<h3>Update Stock Price</h3>
 
 <input id="priceSymbol" placeholder="Stock Symbol">
 <input id="latestPrice" placeholder="Latest Price">
 
-<button onclick="updatePrice()">Update</button>
+<button onclick="updatePrice()">Update Price</button>
+
+</div>
+
+</div>
+
+</div>
+
+<!-- DASHBOARD SECTION -->
+
+<div class="section">
+
+<h2>Portfolio Dashboard</h2>
+
+<div class="grid">
+
+<div class="card">
+<h3>Total Invested</h3>
+<div id="invested" class="stat"></div>
+</div>
+
+<div class="card">
+<h3>Current Portfolio</h3>
+<div id="current" class="stat"></div>
+</div>
+
+<div class="card">
+<h3>Holdings</h3>
+<table id="holdings"></table>
+</div>
+
+<div class="card">
+<h3>Monthly Activity</h3>
+<div id="activity"></div>
+</div>
+
+<div class="card full">
+<h3>Portfolio Allocation</h3>
+<canvas id="allocChart"></canvas>
+</div>
+
+<div class="card full">
+<h3>Future Wealth</h3>
+<canvas id="futureChart"></canvas>
+</div>
+
+</div>
+
+</div>
 
 </div>
 
@@ -98,6 +187,7 @@ let prices = JSON.parse(localStorage.getItem("prices")) || {}
 function save(){
 localStorage.setItem("transactions",JSON.stringify(transactions))
 localStorage.setItem("prices",JSON.stringify(prices))
+render()
 }
 
 function addStock(){
@@ -116,7 +206,6 @@ date
 })
 
 save()
-alert("Stock added")
 
 }
 
@@ -125,18 +214,15 @@ function addMF(){
 let fund=document.getElementById("mfName").value
 let amount=Number(document.getElementById("mfAmount").value)
 let start=document.getElementById("mfStart").value
-let nav=document.getElementById("mfNAV").value
 
 transactions.push({
 type:"mf",
 fund,
 amount,
-start,
-nav
+start
 })
 
 save()
-alert("MF SIP added")
 
 }
 
@@ -148,9 +234,116 @@ let price=Number(document.getElementById("latestPrice").value)
 prices[symbol]=price
 
 save()
-alert("Price updated")
 
 }
+
+function render(){
+
+let invested=0
+let current=0
+let mfTotal=0
+let stockTotal=0
+
+let holdings={}
+let activity=""
+
+transactions.forEach(t=>{
+
+if(t.type==="stock"){
+
+let value=t.qty*t.price
+invested+=value
+
+let last=prices[t.symbol] || t.price
+current+=t.qty*last
+
+stockTotal+=value
+
+holdings[t.symbol]=(holdings[t.symbol]||0)+t.qty
+
+activity+=`${t.symbol} ${t.qty} @ ₹${t.price}<br>`
+
+}
+
+if(t.type==="mf"){
+
+let start=new Date(t.start)
+let today=new Date()
+
+let months=(today.getFullYear()-start.getFullYear())*12+(today.getMonth()-start.getMonth())
+
+if(today.getDate()>=10) months++
+
+let total=months*t.amount
+
+invested+=total
+current+=total
+mfTotal+=total
+
+activity+=`${t.fund} SIP ₹${t.amount}<br>`
+
+}
+
+})
+
+document.getElementById("invested").innerText="₹"+invested.toFixed(2)
+document.getElementById("current").innerText="₹"+current.toFixed(2)
+
+document.getElementById("activity").innerHTML=activity
+
+let table=document.getElementById("holdings")
+table.innerHTML=""
+
+for(let s in holdings){
+
+table.innerHTML+=`<tr><td>${s}</td><td>${holdings[s]}</td></tr>`
+
+}
+
+new Chart(document.getElementById("allocChart"),{
+
+type:"doughnut",
+
+data:{
+labels:["Mutual Funds","Stocks"],
+datasets:[{
+data:[mfTotal,stockTotal],
+backgroundColor:["#4da3ff","#ff5c7a"]
+}]
+}
+
+})
+
+let sip=2100
+let r=0.12/12
+let total=0
+let vals=[]
+
+for(let i=0;i<240;i++){
+
+total=total*(1+r)+sip
+
+if(i%12===0) vals.push(Math.round(total))
+
+}
+
+new Chart(document.getElementById("futureChart"),{
+
+type:"line",
+
+data:{
+labels:Array.from({length:20},(_,i)=>i+1),
+datasets:[{
+data:vals,
+borderColor:"#4da3ff"
+}]
+}
+
+})
+
+}
+
+render()
 
 </script>
 
