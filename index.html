@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html>
 <head>
@@ -20,7 +21,7 @@ color:#e6e9ef;
 overflow-x:hidden;
 }
 
-/* animated gradient background */
+/* animated gradient */
 
 body::before{
 content:'';
@@ -38,8 +39,6 @@ animation:float 16s infinite alternate;
 0%{transform:translate(0,0)}
 100%{transform:translate(280px,200px)}
 }
-
-/* cursor glow */
 
 .cursor{
 position:fixed;
@@ -100,6 +99,7 @@ cursor:pointer;
 display:grid;
 grid-template-columns:1fr 1fr;
 gap:20px;
+margin-top:20px;
 }
 
 canvas{
@@ -160,7 +160,7 @@ font-style:italic;
 </select>
 
 <input id="name" placeholder="Stock or Fund Name">
-<input id="qty" placeholder="Qty (or SIP)">
+<input id="qty" placeholder="Qty or SIP">
 <input id="price" placeholder="Buy price / NAV">
 
 <button onclick="buy()">Add</button>
@@ -187,6 +187,14 @@ font-style:italic;
 <input id="marketPrice" placeholder="Latest price">
 
 <button onclick="updatePrice()">Update</button>
+
+</div>
+
+<div class="card">
+
+<h3>Reset Stocks</h3>
+
+<button onclick="clearStocks()">Clear Stock Holdings</button>
 
 </div>
 
@@ -231,9 +239,12 @@ let prices=JSON.parse(localStorage.getItem("prices"))||{}
 function buy(){
 
 let type=document.getElementById("assetType").value
-let name=document.getElementById("name").value
+let name=document.getElementById("name").value.trim()
+
 let qty=parseFloat(document.getElementById("qty").value)
 let price=parseFloat(document.getElementById("price").value)
+
+if(!name||isNaN(qty)||isNaN(price)) return
 
 ledger.push({
 type:"buy",
@@ -256,6 +267,8 @@ let name=document.getElementById("sellAsset").value
 let qty=parseFloat(document.getElementById("sellQty").value)
 let price=parseFloat(document.getElementById("sellPrice").value)
 
+if(!name||isNaN(qty)||isNaN(price)) return
+
 ledger.push({
 type:"sell",
 name,
@@ -275,47 +288,24 @@ function updatePrice(){
 let name=document.getElementById("priceAsset").value
 let p=parseFloat(document.getElementById("marketPrice").value)
 
+if(!name||isNaN(p)) return
+
 prices[name]=p
 
 save()
 
 }
 
-  <div class="card">
-
-<h3>Reset Portfolio</h3>
-
-<button onclick="clearAll()">Clear All Data</button>
-
-</div>
-
-  function clearAll(){
-
-let confirmReset = confirm("This will erase all portfolio data. Continue?")
-
-if(!confirmReset) return
-
-localStorage.removeItem("ledger")
-localStorage.removeItem("prices")
-
-ledger=[]
-prices={}
-
-render()
-
-}
-/* EDIT HOLDING */
+/* EDIT NAME */
 
 function edit(asset){
 
-let newName = prompt("Correct asset name", asset)
+let newName=prompt("Correct asset name",asset)
 
-if(!newName || newName.trim()==="") return
+if(!newName) return
 
 ledger.forEach(t=>{
-if(t.name===asset){
-t.name=newName.trim()
-}
+if(t.name===asset) t.name=newName
 })
 
 if(prices[asset]){
@@ -324,6 +314,22 @@ delete prices[asset]
 }
 
 save()
+
+}
+
+/* CLEAR STOCKS */
+
+function clearStocks(){
+
+let confirmReset=confirm("Clear all STOCK holdings? Mutual funds remain.")
+
+if(!confirmReset) return
+
+ledger=ledger.filter(t=>t.asset==="mf")
+
+localStorage.setItem("ledger",JSON.stringify(ledger))
+
+render()
 
 }
 
@@ -356,8 +362,9 @@ holdings[t.name]=(holdings[t.name]||0)+t.qty
 
 invested+=t.qty*t.price
 
-let last=prices[t.name]||t.price
-current+=t.qty*last
+let mp=prices[t.name]||t.price
+
+current+=t.qty*mp
 
 timeline+=`${t.name} BUY ${t.qty} @ ₹${t.price}<br>`
 
@@ -373,7 +380,7 @@ timeline+=`${t.name} SELL ${t.qty} @ ₹${t.price}<br>`
 
 })
 
-/* holdings table */
+/* holdings */
 
 let table=document.getElementById("holdings")
 table.innerHTML=""
@@ -405,17 +412,14 @@ document.getElementById("priceAsset").innerHTML=list.map(a=>`<option>${a}</optio
 
 document.getElementById("invested").innerText="₹"+invested.toFixed(2)
 document.getElementById("current").innerText="₹"+current.toFixed(2)
-
 document.getElementById("profit").innerText="P/L ₹"+(current-invested).toFixed(2)
 
 document.getElementById("timeline").innerHTML=timeline
 
-/* destroy old charts */
+/* charts */
 
 if(window.allocChart) window.allocChart.destroy()
 if(window.futureChart) window.futureChart.destroy()
-
-/* allocation chart */
 
 window.allocChart=new Chart(document.getElementById("allocChart"),{
 
@@ -433,7 +437,7 @@ options:{plugins:{legend:{display:false}}}
 
 })
 
-/* future projection */
+/* future */
 
 let sip=2100
 let r=0.12/12
@@ -456,31 +460,5 @@ data:{
 labels:Array.from({length:20},(_,i)=>i+1),
 datasets:[{
 data:vals,
-borderColor:"#4da3ff",
-tension:.3
-}]
-},
-
-options:{plugins:{legend:{display:false}}}
-
-})
-
-/* quotes */
-
-const quotes=[
-"Compounding quietly rewrites your future.",
-"Markets fluctuate. Discipline compounds.",
-"Every SIP is a vote for your future self.",
-"Time in market beats timing the market."
-]
-
-document.getElementById("quote").innerText=quotes[Math.floor(Math.random()*quotes.length)]
-
-}
-
-render()
-
-</script>
-
-</body>
-</html>
+borderColor:"
+```
