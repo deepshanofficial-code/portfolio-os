@@ -285,21 +285,20 @@ save()
 
 function edit(asset){
 
-let newQty=parseFloat(prompt("Enter correct quantity"))
-let newPrice=parseFloat(prompt("Enter correct buy price"))
+let newName = prompt("Correct asset name", asset)
 
-if(isNaN(newQty)||isNaN(newPrice)) return
+if(!newName || newName.trim()==="") return
 
-ledger=ledger.filter(t=>t.name!==asset)
-
-ledger.push({
-type:"buy",
-asset:"edit",
-name:asset,
-qty:newQty,
-price:newPrice,
-date:new Date()
+ledger.forEach(t=>{
+if(t.name===asset){
+t.name=newName.trim()
+}
 })
+
+if(prices[asset]){
+prices[newName]=prices[asset]
+delete prices[asset]
+}
 
 save()
 
