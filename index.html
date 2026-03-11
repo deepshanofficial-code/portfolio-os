@@ -5,88 +5,40 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Portfolio OS</title>
+<title>Portfolio Input</title>
 
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
 
 body{
-margin:0;
 font-family:Inter;
 background:#05070c;
 color:#e6e9ef;
-overflow-x:hidden;
-}
-
-body::before{
-content:'';
-position:fixed;
-width:900px;
-height:900px;
-background:radial-gradient(circle,#3a7bff33,transparent 70%);
-top:-200px;
-left:-200px;
-filter:blur(120px);
-animation:float 14s infinite alternate;
-}
-
-@keyframes float{
-0%{transform:translate(0,0)}
-100%{transform:translate(250px,180px)}
-}
-
-.cursor{
-position:fixed;
-width:420px;
-height:420px;
-pointer-events:none;
-background:radial-gradient(circle,#5a8cff33,transparent 70%);
-transform:translate(-50%,-50%);
-filter:blur(80px);
-}
-
-.container{
-max-width:1300px;
-margin:auto;
+margin:0;
 padding:40px;
-}
-
-.grid{
-display:grid;
-grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
-gap:20px;
 }
 
 .card{
 background:#12161f;
-border-radius:18px;
 padding:20px;
-}
-
-.full{
-grid-column:1/-1;
-}
-
-.stat{
-font-size:24px;
-font-weight:600;
+border-radius:16px;
+margin-bottom:20px;
 }
 
 input{
 width:100%;
-padding:8px;
+padding:10px;
 margin-top:8px;
+margin-bottom:10px;
 background:#0e1219;
 border:none;
 color:white;
-border-radius:6px;
+border-radius:8px;
 }
 
 button{
-margin-top:10px;
-padding:10px;
+padding:10px 16px;
 background:#4da3ff;
 border:none;
 border-radius:8px;
@@ -94,368 +46,111 @@ color:white;
 cursor:pointer;
 }
 
-table{
-width:100%;
-}
-
 </style>
 </head>
 
 <body>
 
-<div class="cursor" id="cursor"></div>
-
-<div class="container">
-
-<h1>Portfolio OS</h1>
-
-<div class="grid">
+<h1>Portfolio Input Console</h1>
 
 <div class="card">
-<h3>Total Invested</h3>
-<div class="stat" id="invested">₹0</div>
-</div>
 
-<div class="card">
-<h3>Current Portfolio</h3>
-<div class="stat" id="current">₹0</div>
-<div id="profit"></div>
-</div>
+<h3>Add Stock Purchase</h3>
 
-<div class="card">
-<h3>Add Stock</h3>
+<input id="stockSymbol" placeholder="Stock Symbol">
+<input id="stockQty" placeholder="Quantity">
+<input id="stockPrice" placeholder="Buy Price">
+<input type="date" id="stockDate">
 
-<input id="symbol" placeholder="Stock">
-<input id="qty" placeholder="Qty" inputmode="numeric">
-<input id="price" placeholder="Buy Price" inputmode="decimal">
-
-<button id="addStockBtn">Add</button>
+<button onclick="addStock()">Add Stock</button>
 
 </div>
 
 <div class="card">
-<h3>Update Market Price</h3>
 
-<input id="psymbol" placeholder="Stock">
-<input id="marketPrice" placeholder="Latest Price">
+<h3>Add Mutual Fund SIP</h3>
 
-<button id="updatePriceBtn">Update</button>
+<input id="mfName" placeholder="Fund Name">
+<input id="mfAmount" placeholder="Monthly SIP Amount">
+<input type="date" id="mfStart">
+<input id="mfNAV" placeholder="Current NAV (optional)">
+
+<button onclick="addMF()">Add MF SIP</button>
 
 </div>
 
 <div class="card">
-<h3>Holdings</h3>
-<table id="holdings"></table>
-</div>
 
-<div class="card">
-<h3>Monthly Activity</h3>
-<div id="timeline"></div>
-</div>
+<h3>Update Stock Market Price</h3>
 
-<div class="card">
-<h3>SIP Engine</h3>
-<div id="nextSip"></div>
-<canvas id="sipChart"></canvas>
-</div>
+<input id="priceSymbol" placeholder="Stock Symbol">
+<input id="latestPrice" placeholder="Latest Price">
 
-<div class="card full">
-<h3>Portfolio Allocation</h3>
-<canvas id="allocChart"></canvas>
-</div>
+<button onclick="updatePrice()">Update</button>
 
-<div class="card full">
-<h3>Future Wealth</h3>
-<canvas id="future"></canvas>
-<div id="ageText"></div>
-</div>
-
-</div>
 </div>
 
 <script>
 
-/* cursor glow */
+let transactions = JSON.parse(localStorage.getItem("transactions")) || []
+let prices = JSON.parse(localStorage.getItem("prices")) || {}
 
-const cursor=document.getElementById("cursor")
-
-document.addEventListener("mousemove",e=>{
-cursor.style.left=e.clientX+"px"
-cursor.style.top=e.clientY+"px"
-})
-
-/* storage */
-
-let stocks=JSON.parse(localStorage.getItem("stocks"))||[]
-let history=JSON.parse(localStorage.getItem("history"))||[]
-let prices=JSON.parse(localStorage.getItem("prices"))||{}
-
-/* SIP setup */
-
-const mfs=[
-{fund:"UTI Nifty 50",amount:1300},
-{fund:"ICICI Next 50",amount:600},
-{fund:"Nippon Multi Cap",amount:200}
-]
-
-/* process SIP every month */
-
-function processSIP(){
-
-let lastSip=localStorage.getItem("lastSip")
-
-let today=new Date()
-let key=today.getFullYear()+"-"+today.getMonth()
-
-if(lastSip!==key && today.getDate()>=10){
-
-mfs.forEach(f=>{
-
-history.push({
-type:"mf",
-fund:f.fund,
-amount:f.amount,
-date:new Date()
-})
-
-})
-
-localStorage.setItem("lastSip",key)
-
+function save(){
+localStorage.setItem("transactions",JSON.stringify(transactions))
+localStorage.setItem("prices",JSON.stringify(prices))
 }
-
-}
-
-/* add stock */
 
 function addStock(){
 
-let symbol=document.getElementById("symbol").value.trim().toUpperCase()
-let qty=Number(document.getElementById("qty").value)
-let price=Number(document.getElementById("price").value)
+let symbol=document.getElementById("stockSymbol").value.toUpperCase()
+let qty=Number(document.getElementById("stockQty").value)
+let price=Number(document.getElementById("stockPrice").value)
+let date=document.getElementById("stockDate").value
 
-if(!symbol || !qty || !price){
-alert("Enter valid stock details")
-return
-}
-
-let e=stocks.find(s=>s.symbol===symbol)
-
-if(e){
-
-let total=e.qty+qty
-e.avg=((e.avg*e.qty)+(price*qty))/total
-e.qty=total
-
-}else{
-
-stocks.push({symbol:symbol,qty:qty,avg:price})
-
-}
-
-history.push({
+transactions.push({
 type:"stock",
-symbol:symbol,
-qty:qty,
-price:price,
-date:new Date()
+symbol,
+qty,
+price,
+date
 })
 
 save()
+alert("Stock added")
 
 }
 
-/* update market price */
+function addMF(){
+
+let fund=document.getElementById("mfName").value
+let amount=Number(document.getElementById("mfAmount").value)
+let start=document.getElementById("mfStart").value
+let nav=document.getElementById("mfNAV").value
+
+transactions.push({
+type:"mf",
+fund,
+amount,
+start,
+nav
+})
+
+save()
+alert("MF SIP added")
+
+}
 
 function updatePrice(){
 
-let s=document.getElementById("psymbol").value.toUpperCase()
-let p=Number(document.getElementById("marketPrice").value)
+let symbol=document.getElementById("priceSymbol").value.toUpperCase()
+let price=Number(document.getElementById("latestPrice").value)
 
-prices[s]=p
+prices[symbol]=price
 
 save()
+alert("Price updated")
 
 }
-
-/* save */
-
-function save(){
-
-localStorage.setItem("stocks",JSON.stringify(stocks))
-localStorage.setItem("history",JSON.stringify(history))
-localStorage.setItem("prices",JSON.stringify(prices))
-
-render()
-
-}
-
-/* render */
-
-let sipChart
-let allocChart
-
-function render(){
-
-processSIP()
-
-let invested=0
-let current=0
-
-const table=document.getElementById("holdings")
-table.innerHTML=""
-
-/* stocks */
-
-stocks.forEach(s=>{
-
-let last=prices[s.symbol]||s.avg
-
-invested+=s.qty*s.avg
-current+=s.qty*last
-
-table.innerHTML+=`
-<tr>
-<td>${s.symbol}</td>
-<td>${s.qty}</td>
-<td>₹${s.avg}</td>
-<td>₹${last}</td>
-</tr>
-`
-
-})
-
-/* MF total */
-
-let mfValue=history
-.filter(h=>h.type==="mf")
-.reduce((a,b)=>a+b.amount,0)
-
-invested+=mfValue
-current+=mfValue
-
-document.getElementById("invested").innerText="₹"+invested.toFixed(2)
-document.getElementById("current").innerText="₹"+current.toFixed(2)
-
-document.getElementById("profit").innerText="P/L ₹"+(current-invested).toFixed(2)
-
-/* monthly activity */
-
-let months={}
-
-history.forEach(h=>{
-
-let m=new Date(h.date)
-.toLocaleString("default",{month:"long",year:"numeric"})
-
-if(!months[m]) months[m]=[]
-
-months[m].push(h)
-
-})
-
-let t=""
-
-for(let m in months){
-
-t+=`<b>${m}</b><br>`
-
-months[m].forEach(h=>{
-
-if(h.type==="stock")
-t+=`${h.symbol} ${h.qty} @ ₹${h.price}<br>`
-
-if(h.type==="mf")
-t+=`${h.fund} SIP ₹${h.amount}<br>`
-
-})
-
-t+="<br>"
-}
-
-document.getElementById("timeline").innerHTML=t
-
-/* next SIP */
-
-let d=new Date()
-let next=new Date(d.getFullYear(),d.getMonth(),10)
-
-if(d.getDate()>10) next.setMonth(next.getMonth()+1)
-
-document.getElementById("nextSip").innerText="Next SIP "+next.toDateString()
-
-/* sip chart */
-
-if(sipChart) sipChart.destroy()
-
-sipChart=new Chart(document.getElementById("sipChart"),{
-type:"bar",
-data:{
-labels:["UTI Nifty","ICICI Next 50","Nippon Multi"],
-datasets:[{
-data:[1300,600,200],
-backgroundColor:"#4da3ff"
-}]
-},
-options:{plugins:{legend:{display:false}}}
-})
-
-/* allocation */
-
-if(allocChart) allocChart.destroy()
-
-allocChart=new Chart(document.getElementById("allocChart"),{
-
-type:"doughnut",
-
-data:{
-labels:["Mutual Funds","Stocks"],
-datasets:[{
-data:[
-mfValue,
-stocks.reduce((a,b)=>a+(b.qty*b.avg),0)
-],
-backgroundColor:["#4da3ff","#ff5c7a"]
-}]
-}
-
-})
-
-}
-
-/* future projection */
-
-let sip=2100
-let r=0.12/12
-let total=0
-let vals=[]
-
-for(let i=0;i<240;i++){
-
-total=total*(1+r)+sip
-
-if(i%12===0) vals.push(Math.round(total))
-
-}
-
-new Chart(document.getElementById("future"),{
-type:"line",
-data:{
-labels:Array.from({length:20},(_,i)=>i+1),
-datasets:[{
-data:vals,
-borderColor:"#4da3ff",
-tension:.3
-}]
-}
-})
-
-document.getElementById("ageText").innerText="Projection assumes ₹2100 SIP until age 40–50"
-
-document.getElementById("addStockBtn").addEventListener("click",addStock)
-document.getElementById("updatePriceBtn").addEventListener("click",updatePrice)
-
-render()
 
 </script>
 
