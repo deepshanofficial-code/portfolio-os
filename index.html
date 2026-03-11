@@ -126,8 +126,8 @@ width:100%;
 <h3>Add Stock</h3>
 
 <input id="symbol" placeholder="Stock">
-<input id="qty" placeholder="Qty">
-<input id="price" placeholder="Buy Price">
+<input id="qty" placeholder="Qty" inputmode="numeric">
+<input id="price" placeholder="Buy Price" inputmode="decimal">
 
 <button id="addStockBtn">Add</button>
 
@@ -139,7 +139,7 @@ width:100%;
 <input id="psymbol" placeholder="Stock">
 <input id="marketPrice" placeholder="Latest Price">
 
-<button onclick="updatePrice()">Update</button>
+<button id="updatePriceBtn">Update</button>
 
 </div>
 
@@ -175,65 +175,83 @@ width:100%;
 
 <script>
 
-/* cursor */
+/* cursor glow */
 
 const cursor=document.getElementById("cursor")
+
 document.addEventListener("mousemove",e=>{
 cursor.style.left=e.clientX+"px"
 cursor.style.top=e.clientY+"px"
 })
 
-/* STORAGE */
+/* storage */
 
 let stocks=JSON.parse(localStorage.getItem("stocks"))||[]
-
 let history=JSON.parse(localStorage.getItem("history"))||[]
-
 let prices=JSON.parse(localStorage.getItem("prices"))||{}
 
-/* SIP CONFIG */
-
-const sipStart = new Date("2026-03-10")
+/* SIP setup */
 
 const mfs=[
-{fund:"UTI Nifty 50 Index Fund Direct Growth",amount:1300},
-{fund:"ICICI Prudential Nifty Next 50 Index",amount:600},
-{fund:"Nippon India Multi Cap Fund Direct Growth",amount:200}
+{fund:"UTI Nifty 50",amount:1300},
+{fund:"ICICI Next 50",amount:600},
+{fund:"Nippon Multi Cap",amount:200}
 ]
 
-/* ADD STOCK */
+/* process SIP every month */
+
+function processSIP(){
+
+let lastSip=localStorage.getItem("lastSip")
+
+let today=new Date()
+let key=today.getFullYear()+"-"+today.getMonth()
+
+if(lastSip!==key && today.getDate()>=10){
+
+mfs.forEach(f=>{
+
+history.push({
+type:"mf",
+fund:f.fund,
+amount:f.amount,
+date:new Date()
+})
+
+})
+
+localStorage.setItem("lastSip",key)
+
+}
+
+}
+
+/* add stock */
 
 function addStock(){
 
-let symbol = document.getElementById("symbol").value.trim().toUpperCase()
-
-let qty = Number(document.getElementById("qty").value)
-let price = Number(document.getElementById("price").value)
+let symbol=document.getElementById("symbol").value.trim().toUpperCase()
+let qty=Number(document.getElementById("qty").value)
+let price=Number(document.getElementById("price").value)
 
 if(!symbol || !qty || !price){
 alert("Enter valid stock details")
 return
 }
 
-let existing = stocks.find(s => s.symbol === symbol)
+let e=stocks.find(s=>s.symbol===symbol)
 
-if(existing){
+if(e){
 
-let totalQty = existing.qty + qty
-existing.avg = ((existing.avg * existing.qty) + (price * qty)) / totalQty
-existing.qty = totalQty
+let total=e.qty+qty
+e.avg=((e.avg*e.qty)+(price*qty))/total
+e.qty=total
 
 }else{
 
-stocks.push({
-symbol: symbol,
-qty: qty,
-avg: price
-})
+stocks.push({symbol:symbol,qty:qty,avg:price})
 
 }
-
-/* add to monthly activity */
 
 history.push({
 type:"stock",
@@ -243,22 +261,16 @@ price:price,
 date:new Date()
 })
 
-/* clear inputs (important for iOS) */
-
-document.getElementById("symbol").value=""
-document.getElementById("qty").value=""
-document.getElementById("price").value=""
-
 save()
 
 }
 
-/* UPDATE PRICE */
+/* update market price */
 
 function updatePrice(){
 
 let s=document.getElementById("psymbol").value.toUpperCase()
-let p=parseFloat(document.getElementById("marketPrice").value)
+let p=Number(document.getElementById("marketPrice").value)
 
 prices[s]=p
 
@@ -266,7 +278,7 @@ save()
 
 }
 
-/* SAVE */
+/* save */
 
 function save(){
 
@@ -278,32 +290,14 @@ render()
 
 }
 
-/* CALCULATE SIP */
-
-function getMFInvested(){
-
-const today=new Date()
-
-let months=
-(today.getFullYear()-sipStart.getFullYear())*12 +
-(today.getMonth()-sipStart.getMonth())
-
-if(today.getDate()>=10) months+=1
-
-if(months<0) months=0
-
-let monthly=mfs.reduce((a,b)=>a+b.amount,0)
-
-return months*monthly
-
-}
-
-/* RENDER */
+/* render */
 
 let sipChart
 let allocChart
 
 function render(){
+
+processSIP()
 
 let invested=0
 let current=0
@@ -311,7 +305,7 @@ let current=0
 const table=document.getElementById("holdings")
 table.innerHTML=""
 
-/* STOCKS */
+/* stocks */
 
 stocks.forEach(s=>{
 
@@ -331,9 +325,11 @@ table.innerHTML+=`
 
 })
 
-/* MF */
+/* MF total */
 
-let mfValue=getMFInvested()
+let mfValue=history
+.filter(h=>h.type==="mf")
+.reduce((a,b)=>a+b.amount,0)
 
 invested+=mfValue
 current+=mfValue
@@ -343,7 +339,7 @@ document.getElementById("current").innerText="₹"+current.toFixed(2)
 
 document.getElementById("profit").innerText="P/L ₹"+(current-invested).toFixed(2)
 
-/* MONTHLY ACTIVITY */
+/* monthly activity */
 
 let months={}
 
@@ -365,7 +361,13 @@ for(let m in months){
 t+=`<b>${m}</b><br>`
 
 months[m].forEach(h=>{
+
+if(h.type==="stock")
 t+=`${h.symbol} ${h.qty} @ ₹${h.price}<br>`
+
+if(h.type==="mf")
+t+=`${h.fund} SIP ₹${h.amount}<br>`
+
 })
 
 t+="<br>"
@@ -373,35 +375,32 @@ t+="<br>"
 
 document.getElementById("timeline").innerHTML=t
 
-/* NEXT SIP */
+/* next SIP */
 
 let d=new Date()
 let next=new Date(d.getFullYear(),d.getMonth(),10)
+
 if(d.getDate()>10) next.setMonth(next.getMonth()+1)
 
 document.getElementById("nextSip").innerText="Next SIP "+next.toDateString()
 
-/* SIP CHART */
+/* sip chart */
 
 if(sipChart) sipChart.destroy()
 
 sipChart=new Chart(document.getElementById("sipChart"),{
-
 type:"bar",
-
 data:{
-labels:["UTI Nifty","ICICI Next 50","Nippon Multi Cap"],
+labels:["UTI Nifty","ICICI Next 50","Nippon Multi"],
 datasets:[{
 data:[1300,600,200],
 backgroundColor:"#4da3ff"
 }]
 },
-
 options:{plugins:{legend:{display:false}}}
-
 })
 
-/* ALLOCATION */
+/* allocation */
 
 if(allocChart) allocChart.destroy()
 
@@ -424,7 +423,7 @@ backgroundColor:["#4da3ff","#ff5c7a"]
 
 }
 
-/* FUTURE PROJECTION */
+/* future projection */
 
 let sip=2100
 let r=0.12/12
@@ -440,9 +439,7 @@ if(i%12===0) vals.push(Math.round(total))
 }
 
 new Chart(document.getElementById("future"),{
-
 type:"line",
-
 data:{
 labels:Array.from({length:20},(_,i)=>i+1),
 datasets:[{
@@ -451,10 +448,12 @@ borderColor:"#4da3ff",
 tension:.3
 }]
 }
-
 })
 
 document.getElementById("ageText").innerText="Projection assumes ₹2100 SIP until age 40–50"
+
+document.getElementById("addStockBtn").addEventListener("click",addStock)
+document.getElementById("updatePriceBtn").addEventListener("click",updatePrice)
 
 render()
 
