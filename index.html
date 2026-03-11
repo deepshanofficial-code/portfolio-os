@@ -17,20 +17,49 @@ margin:0;
 font-family:Inter;
 background:#05070c;
 color:#e6e9ef;
+overflow-x:hidden;
 }
+
+/* floating background */
+
+body::before{
+content:'';
+position:fixed;
+width:900px;
+height:900px;
+background:radial-gradient(circle,#3a7bff33,transparent 70%);
+top:-200px;
+left:-200px;
+filter:blur(120px);
+animation:float 14s infinite alternate;
+}
+
+@keyframes float{
+0%{transform:translate(0,0)}
+100%{transform:translate(300px,200px)}
+}
+
+/* cursor glow */
+
+.cursor{
+position:fixed;
+width:400px;
+height:400px;
+pointer-events:none;
+background:radial-gradient(circle,#5a8cff33,transparent 70%);
+transform:translate(-50%,-50%);
+filter:blur(80px);
+z-index:0;
+}
+
+/* layout */
 
 .container{
-max-width:1200px;
+max-width:1300px;
 margin:auto;
 padding:40px;
-}
-
-h1{
-margin-bottom:20px;
-}
-
-.section{
-margin-bottom:40px;
+position:relative;
+z-index:1;
 }
 
 .grid{
@@ -41,19 +70,30 @@ gap:20px;
 
 .card{
 background:#12161f;
-border-radius:16px;
+border-radius:18px;
 padding:20px;
+box-shadow:0 15px 60px rgba(0,0,0,.6);
+transition:.3s;
+}
+
+.card:hover{
+transform:translateY(-5px);
 }
 
 .full{
 grid-column:1/-1;
 }
 
+.stat{
+font-size:26px;
+font-weight:600;
+margin-top:6px;
+}
+
 input{
 width:100%;
 padding:10px;
 margin-top:6px;
-margin-bottom:10px;
 background:#0e1219;
 border:none;
 border-radius:8px;
@@ -61,6 +101,7 @@ color:white;
 }
 
 button{
+margin-top:10px;
 padding:10px;
 background:#4da3ff;
 border:none;
@@ -69,77 +110,26 @@ color:white;
 cursor:pointer;
 }
 
-.stat{
-font-size:24px;
-font-weight:600;
-}
-
 table{
 width:100%;
+margin-top:10px;
+}
+
+td{
+padding:6px 0;
 }
 
 </style>
+
 </head>
 
 <body>
 
+<div class="cursor" id="cursor"></div>
+
 <div class="container">
 
 <h1>Portfolio OS</h1>
-
-<!-- INPUT SECTION -->
-
-<div class="section">
-
-<h2>Portfolio Input Console</h2>
-
-<div class="grid">
-
-<div class="card">
-
-<h3>Add Stock</h3>
-
-<input id="stockSymbol" placeholder="Stock Symbol">
-<input id="stockQty" placeholder="Quantity">
-<input id="stockPrice" placeholder="Buy Price">
-<input type="date" id="stockDate">
-
-<button onclick="addStock()">Add Stock</button>
-
-</div>
-
-<div class="card">
-
-<h3>Add MF SIP</h3>
-
-<input id="mfName" placeholder="Fund Name">
-<input id="mfAmount" placeholder="Monthly SIP Amount">
-<input type="date" id="mfStart">
-
-<button onclick="addMF()">Add MF</button>
-
-</div>
-
-<div class="card">
-
-<h3>Update Stock Price</h3>
-
-<input id="priceSymbol" placeholder="Stock Symbol">
-<input id="latestPrice" placeholder="Latest Price">
-
-<button onclick="updatePrice()">Update Price</button>
-
-</div>
-
-</div>
-
-</div>
-
-<!-- DASHBOARD SECTION -->
-
-<div class="section">
-
-<h2>Portfolio Dashboard</h2>
 
 <div class="grid">
 
@@ -151,6 +141,59 @@ width:100%;
 <div class="card">
 <h3>Current Portfolio</h3>
 <div id="current" class="stat"></div>
+<div id="profit"></div>
+</div>
+
+<div class="card">
+<h3>Realised Profit</h3>
+<div id="realised" class="stat"></div>
+</div>
+
+<div class="card">
+
+<h3>Buy Stock</h3>
+
+<input id="symbol" placeholder="Stock Symbol">
+<input id="qty" placeholder="Qty">
+<input id="price" placeholder="Buy Price">
+
+<button onclick="buyStock()">Buy</button>
+
+</div>
+
+<div class="card">
+
+<h3>Sell Stock</h3>
+
+<input id="sellSymbol" placeholder="Stock Symbol">
+<input id="sellQty" placeholder="Qty">
+<input id="sellPrice" placeholder="Sell Price">
+
+<button onclick="sellStock()">Sell</button>
+
+</div>
+
+<div class="card">
+
+<h3>Add MF SIP</h3>
+
+<input id="fund" placeholder="Fund name">
+<input id="sip" placeholder="Monthly SIP">
+<input type="date" id="start">
+
+<button onclick="addMF()">Add SIP</button>
+
+</div>
+
+<div class="card">
+
+<h3>Update Market Price</h3>
+
+<input id="psymbol" placeholder="Stock">
+<input id="marketPrice" placeholder="Latest Price">
+
+<button onclick="updatePrice()">Update</button>
+
 </div>
 
 <div class="card">
@@ -160,19 +203,17 @@ width:100%;
 
 <div class="card">
 <h3>Monthly Activity</h3>
-<div id="activity"></div>
+<div id="timeline"></div>
 </div>
 
 <div class="card full">
 <h3>Portfolio Allocation</h3>
-<canvas id="allocChart"></canvas>
+<canvas id="alloc"></canvas>
 </div>
 
 <div class="card full">
 <h3>Future Wealth</h3>
-<canvas id="futureChart"></canvas>
-</div>
-
+<canvas id="future"></canvas>
 </div>
 
 </div>
@@ -181,44 +222,72 @@ width:100%;
 
 <script>
 
-let transactions = JSON.parse(localStorage.getItem("transactions")) || []
-let prices = JSON.parse(localStorage.getItem("prices")) || {}
+/* cursor */
 
-function save(){
-localStorage.setItem("transactions",JSON.stringify(transactions))
-localStorage.setItem("prices",JSON.stringify(prices))
-render()
-}
+const cursor=document.getElementById("cursor")
 
-function addStock(){
+document.addEventListener("mousemove",e=>{
+cursor.style.left=e.clientX+"px"
+cursor.style.top=e.clientY+"px"
+})
 
-let symbol=document.getElementById("stockSymbol").value.toUpperCase()
-let qty=Number(document.getElementById("stockQty").value)
-let price=Number(document.getElementById("stockPrice").value)
-let date=document.getElementById("stockDate").value
+/* storage */
 
-transactions.push({
-type:"stock",
+let ledger=JSON.parse(localStorage.getItem("ledger"))||[]
+let prices=JSON.parse(localStorage.getItem("prices"))||{}
+
+/* BUY */
+
+function buyStock(){
+
+let symbol=document.getElementById("symbol").value.toUpperCase()
+let qty=Number(document.getElementById("qty").value)
+let price=Number(document.getElementById("price").value)
+
+ledger.push({
+type:"buy",
 symbol,
 qty,
 price,
-date
+date:new Date()
 })
 
 save()
 
 }
 
+/* SELL */
+
+function sellStock(){
+
+let symbol=document.getElementById("sellSymbol").value.toUpperCase()
+let qty=Number(document.getElementById("sellQty").value)
+let price=Number(document.getElementById("sellPrice").value)
+
+ledger.push({
+type:"sell",
+symbol,
+qty,
+price,
+date:new Date()
+})
+
+save()
+
+}
+
+/* MF */
+
 function addMF(){
 
-let fund=document.getElementById("mfName").value
-let amount=Number(document.getElementById("mfAmount").value)
-let start=document.getElementById("mfStart").value
+let fund=document.getElementById("fund").value
+let sip=Number(document.getElementById("sip").value)
+let start=document.getElementById("start").value
 
-transactions.push({
+ledger.push({
 type:"mf",
 fund,
-amount,
+sip,
 start
 })
 
@@ -226,42 +295,63 @@ save()
 
 }
 
+/* update price */
+
 function updatePrice(){
 
-let symbol=document.getElementById("priceSymbol").value.toUpperCase()
-let price=Number(document.getElementById("latestPrice").value)
+let s=document.getElementById("psymbol").value.toUpperCase()
+let p=Number(document.getElementById("marketPrice").value)
 
-prices[symbol]=price
+prices[s]=p
 
 save()
 
 }
 
+/* save */
+
+function save(){
+
+localStorage.setItem("ledger",JSON.stringify(ledger))
+localStorage.setItem("prices",JSON.stringify(prices))
+
+render()
+
+}
+
+/* render */
+
 function render(){
 
+let holdings={}
 let invested=0
 let current=0
-let mfTotal=0
-let stockTotal=0
+let realised=0
 
-let holdings={}
-let activity=""
+let timeline=""
 
-transactions.forEach(t=>{
+ledger.forEach(t=>{
 
-if(t.type==="stock"){
-
-let value=t.qty*t.price
-invested+=value
-
-let last=prices[t.symbol] || t.price
-current+=t.qty*last
-
-stockTotal+=value
+if(t.type==="buy"){
 
 holdings[t.symbol]=(holdings[t.symbol]||0)+t.qty
 
-activity+=`${t.symbol} ${t.qty} @ ₹${t.price}<br>`
+invested+=t.qty*t.price
+
+let last=prices[t.symbol]||t.price
+current+=t.qty*last
+
+timeline+=`${t.symbol} BUY ${t.qty} @ ₹${t.price}<br>`
+
+}
+
+if(t.type==="sell"){
+
+holdings[t.symbol]-=t.qty
+
+realised+=t.qty*(t.price)
+
+timeline+=`${t.symbol} SELL ${t.qty} @ ₹${t.price}<br>`
 
 }
 
@@ -274,13 +364,12 @@ let months=(today.getFullYear()-start.getFullYear())*12+(today.getMonth()-start.
 
 if(today.getDate()>=10) months++
 
-let total=months*t.amount
+let total=months*t.sip
 
 invested+=total
 current+=total
-mfTotal+=total
 
-activity+=`${t.fund} SIP ₹${t.amount}<br>`
+timeline+=`${t.fund} SIP ₹${t.sip}<br>`
 
 }
 
@@ -288,31 +377,42 @@ activity+=`${t.fund} SIP ₹${t.amount}<br>`
 
 document.getElementById("invested").innerText="₹"+invested.toFixed(2)
 document.getElementById("current").innerText="₹"+current.toFixed(2)
+document.getElementById("realised").innerText="₹"+realised.toFixed(2)
 
-document.getElementById("activity").innerHTML=activity
+document.getElementById("profit").innerText="P/L ₹"+(current-invested).toFixed(2)
+
+document.getElementById("timeline").innerHTML=timeline
 
 let table=document.getElementById("holdings")
 table.innerHTML=""
 
 for(let s in holdings){
 
+if(holdings[s]>0){
+
 table.innerHTML+=`<tr><td>${s}</td><td>${holdings[s]}</td></tr>`
 
 }
 
-new Chart(document.getElementById("allocChart"),{
+}
+
+/* allocation */
+
+new Chart(document.getElementById("alloc"),{
 
 type:"doughnut",
 
 data:{
-labels:["Mutual Funds","Stocks"],
+labels:["Stocks","Mutual Funds"],
 datasets:[{
-data:[mfTotal,stockTotal],
+data:[invested,current-invested],
 backgroundColor:["#4da3ff","#ff5c7a"]
 }]
 }
 
 })
+
+/* future wealth */
 
 let sip=2100
 let r=0.12/12
@@ -327,7 +427,7 @@ if(i%12===0) vals.push(Math.round(total))
 
 }
 
-new Chart(document.getElementById("futureChart"),{
+new Chart(document.getElementById("future"),{
 
 type:"line",
 
