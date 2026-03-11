@@ -20,7 +20,7 @@ color:#e6e9ef;
 overflow-x:hidden;
 }
 
-/* floating background */
+/* animated gradient background */
 
 body::before{
 content:'';
@@ -31,35 +31,30 @@ background:radial-gradient(circle,#3a7bff33,transparent 70%);
 top:-200px;
 left:-200px;
 filter:blur(120px);
-animation:float 14s infinite alternate;
+animation:float 16s infinite alternate;
 }
 
 @keyframes float{
 0%{transform:translate(0,0)}
-100%{transform:translate(300px,200px)}
+100%{transform:translate(280px,200px)}
 }
 
 /* cursor glow */
 
 .cursor{
 position:fixed;
-width:400px;
-height:400px;
+width:380px;
+height:380px;
 pointer-events:none;
 background:radial-gradient(circle,#5a8cff33,transparent 70%);
 transform:translate(-50%,-50%);
 filter:blur(80px);
-z-index:0;
 }
-
-/* layout */
 
 .container{
 max-width:1300px;
 margin:auto;
 padding:40px;
-position:relative;
-z-index:1;
 }
 
 .grid{
@@ -69,35 +64,26 @@ gap:20px;
 }
 
 .card{
-background:#12161f;
+background:rgba(18,22,31,.8);
+backdrop-filter:blur(16px);
 border-radius:18px;
 padding:20px;
 box-shadow:0 15px 60px rgba(0,0,0,.6);
-transition:.3s;
-}
-
-.card:hover{
-transform:translateY(-5px);
-}
-
-.full{
-grid-column:1/-1;
 }
 
 .stat{
-font-size:26px;
+font-size:24px;
 font-weight:600;
-margin-top:6px;
 }
 
-input{
+input,select{
 width:100%;
-padding:10px;
+padding:8px;
 margin-top:6px;
 background:#0e1219;
 border:none;
-border-radius:8px;
 color:white;
+border-radius:8px;
 }
 
 button{
@@ -110,17 +96,27 @@ color:white;
 cursor:pointer;
 }
 
-table{
-width:100%;
-margin-top:10px;
+.rowCharts{
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:20px;
 }
 
-td{
-padding:6px 0;
+canvas{
+max-height:240px;
+}
+
+table{
+width:100%;
+}
+
+.quote{
+margin-top:30px;
+opacity:.7;
+font-style:italic;
 }
 
 </style>
-
 </head>
 
 <body>
@@ -129,71 +125,19 @@ padding:6px 0;
 
 <div class="container">
 
-<h1>Portfolio OS</h1>
+<h1>Portfolio Dashboard</h1>
 
 <div class="grid">
 
 <div class="card">
 <h3>Total Invested</h3>
-<div id="invested" class="stat"></div>
+<div class="stat" id="invested"></div>
 </div>
 
 <div class="card">
 <h3>Current Portfolio</h3>
-<div id="current" class="stat"></div>
+<div class="stat" id="current"></div>
 <div id="profit"></div>
-</div>
-
-<div class="card">
-<h3>Realised Profit</h3>
-<div id="realised" class="stat"></div>
-</div>
-
-<div class="card">
-
-<h3>Buy Stock</h3>
-
-<input id="symbol" placeholder="Stock Symbol">
-<input id="qty" placeholder="Qty">
-<input id="price" placeholder="Buy Price">
-
-<button onclick="buyStock()">Buy</button>
-
-</div>
-
-<div class="card">
-
-<h3>Sell Stock</h3>
-
-<input id="sellSymbol" placeholder="Stock Symbol">
-<input id="sellQty" placeholder="Qty">
-<input id="sellPrice" placeholder="Sell Price">
-
-<button onclick="sellStock()">Sell</button>
-
-</div>
-
-<div class="card">
-
-<h3>Add MF SIP</h3>
-
-<input id="fund" placeholder="Fund name">
-<input id="sip" placeholder="Monthly SIP">
-<input type="date" id="start">
-
-<button onclick="addMF()">Add SIP</button>
-
-</div>
-
-<div class="card">
-
-<h3>Update Market Price</h3>
-
-<input id="psymbol" placeholder="Stock">
-<input id="marketPrice" placeholder="Latest Price">
-
-<button onclick="updatePrice()">Update</button>
-
 </div>
 
 <div class="card">
@@ -206,17 +150,63 @@ padding:6px 0;
 <div id="timeline"></div>
 </div>
 
-<div class="card full">
+<div class="card">
+
+<h3>Buy Asset</h3>
+
+<select id="assetType">
+<option value="stock">Stock</option>
+<option value="mf">Mutual Fund</option>
+</select>
+
+<input id="name" placeholder="Stock or Fund Name">
+<input id="qty" placeholder="Qty (or SIP)">
+<input id="price" placeholder="Buy price / NAV">
+
+<button onclick="buy()">Add</button>
+
+</div>
+
+<div class="card">
+
+<h3>Sell Asset</h3>
+
+<select id="sellAsset"></select>
+<input id="sellQty" placeholder="Qty / Units">
+<input id="sellPrice" placeholder="Sell price">
+
+<button onclick="sell()">Sell</button>
+
+</div>
+
+<div class="card">
+
+<h3>Update Market Price</h3>
+
+<select id="priceAsset"></select>
+<input id="marketPrice" placeholder="Latest price">
+
+<button onclick="updatePrice()">Update</button>
+
+</div>
+
+</div>
+
+<div class="rowCharts">
+
+<div class="card">
 <h3>Portfolio Allocation</h3>
-<canvas id="alloc"></canvas>
+<canvas id="allocChart"></canvas>
 </div>
 
-<div class="card full">
+<div class="card">
 <h3>Future Wealth</h3>
-<canvas id="future"></canvas>
+<canvas id="futureChart"></canvas>
 </div>
 
 </div>
+
+<div class="quote" id="quote"></div>
 
 </div>
 
@@ -238,15 +228,17 @@ let prices=JSON.parse(localStorage.getItem("prices"))||{}
 
 /* BUY */
 
-function buyStock(){
+function buy(){
 
-let symbol=document.getElementById("symbol").value.toUpperCase()
-let qty=Number(document.getElementById("qty").value)
-let price=Number(document.getElementById("price").value)
+let type=document.getElementById("assetType").value
+let name=document.getElementById("name").value
+let qty=parseFloat(document.getElementById("qty").value)
+let price=parseFloat(document.getElementById("price").value)
 
 ledger.push({
 type:"buy",
-symbol,
+asset:type,
+name,
 qty,
 price,
 date:new Date()
@@ -258,15 +250,15 @@ save()
 
 /* SELL */
 
-function sellStock(){
+function sell(){
 
-let symbol=document.getElementById("sellSymbol").value.toUpperCase()
-let qty=Number(document.getElementById("sellQty").value)
-let price=Number(document.getElementById("sellPrice").value)
+let name=document.getElementById("sellAsset").value
+let qty=parseFloat(document.getElementById("sellQty").value)
+let price=parseFloat(document.getElementById("sellPrice").value)
 
 ledger.push({
 type:"sell",
-symbol,
+name,
 qty,
 price,
 date:new Date()
@@ -276,33 +268,14 @@ save()
 
 }
 
-/* MF */
-
-function addMF(){
-
-let fund=document.getElementById("fund").value
-let sip=Number(document.getElementById("sip").value)
-let start=document.getElementById("start").value
-
-ledger.push({
-type:"mf",
-fund,
-sip,
-start
-})
-
-save()
-
-}
-
-/* update price */
+/* price update */
 
 function updatePrice(){
 
-let s=document.getElementById("psymbol").value.toUpperCase()
-let p=Number(document.getElementById("marketPrice").value)
+let name=document.getElementById("priceAsset").value
+let p=parseFloat(document.getElementById("marketPrice").value)
 
-prices[s]=p
+prices[name]=p
 
 save()
 
@@ -326,7 +299,6 @@ function render(){
 let holdings={}
 let invested=0
 let current=0
-let realised=0
 
 let timeline=""
 
@@ -334,85 +306,83 @@ ledger.forEach(t=>{
 
 if(t.type==="buy"){
 
-holdings[t.symbol]=(holdings[t.symbol]||0)+t.qty
+holdings[t.name]=(holdings[t.name]||0)+t.qty
 
 invested+=t.qty*t.price
 
-let last=prices[t.symbol]||t.price
+let last=prices[t.name]||t.price
 current+=t.qty*last
 
-timeline+=`${t.symbol} BUY ${t.qty} @ ₹${t.price}<br>`
+timeline+=`${t.name} BUY ${t.qty} @ ₹${t.price}<br>`
 
 }
 
 if(t.type==="sell"){
 
-holdings[t.symbol]-=t.qty
+holdings[t.name]-=t.qty
 
-realised+=t.qty*(t.price)
-
-timeline+=`${t.symbol} SELL ${t.qty} @ ₹${t.price}<br>`
-
-}
-
-if(t.type==="mf"){
-
-let start=new Date(t.start)
-let today=new Date()
-
-let months=(today.getFullYear()-start.getFullYear())*12+(today.getMonth()-start.getMonth())
-
-if(today.getDate()>=10) months++
-
-let total=months*t.sip
-
-invested+=total
-current+=total
-
-timeline+=`${t.fund} SIP ₹${t.sip}<br>`
+timeline+=`${t.name} SELL ${t.qty} @ ₹${t.price}<br>`
 
 }
 
 })
 
+/* holdings table */
+
+let table=document.getElementById("holdings")
+table.innerHTML=""
+
+for(let a in holdings){
+
+if(holdings[a]>0){
+
+table.innerHTML+=`
+<tr>
+<td>${a}</td>
+<td>${holdings[a]}</td>
+<td><button onclick="edit('${a}')">Edit</button></td>
+</tr>
+`
+
+}
+
+}
+
+/* dropdowns */
+
+let list=Object.keys(holdings)
+
+document.getElementById("sellAsset").innerHTML=list.map(a=>`<option>${a}</option>`).join("")
+document.getElementById("priceAsset").innerHTML=list.map(a=>`<option>${a}</option>`).join("")
+
+/* stats */
+
 document.getElementById("invested").innerText="₹"+invested.toFixed(2)
 document.getElementById("current").innerText="₹"+current.toFixed(2)
-document.getElementById("realised").innerText="₹"+realised.toFixed(2)
 
 document.getElementById("profit").innerText="P/L ₹"+(current-invested).toFixed(2)
 
 document.getElementById("timeline").innerHTML=timeline
 
-let table=document.getElementById("holdings")
-table.innerHTML=""
+/* allocation chart */
 
-for(let s in holdings){
-
-if(holdings[s]>0){
-
-table.innerHTML+=`<tr><td>${s}</td><td>${holdings[s]}</td></tr>`
-
-}
-
-}
-
-/* allocation */
-
-new Chart(document.getElementById("alloc"),{
+let alloc=new Chart(document.getElementById("allocChart"),{
 
 type:"doughnut",
 
 data:{
-labels:["Stocks","Mutual Funds"],
+labels:["Equity","Funds"],
 datasets:[{
 data:[invested,current-invested],
 backgroundColor:["#4da3ff","#ff5c7a"]
 }]
-}
+},
+
+options:{plugins:{legend:{display:false}}}
 
 })
 
-/* future wealth */
+/* future projection */
 
 let sip=2100
 let r=0.12/12
@@ -427,7 +397,7 @@ if(i%12===0) vals.push(Math.round(total))
 
 }
 
-new Chart(document.getElementById("future"),{
+new Chart(document.getElementById("futureChart"),{
 
 type:"line",
 
@@ -435,11 +405,25 @@ data:{
 labels:Array.from({length:20},(_,i)=>i+1),
 datasets:[{
 data:vals,
-borderColor:"#4da3ff"
+borderColor:"#4da3ff",
+tension:.3
 }]
-}
+},
+
+options:{plugins:{legend:{display:false}}}
 
 })
+
+/* nerd quotes */
+
+const quotes=[
+"Compounding quietly rewrites your future.",
+"Markets fluctuate. Discipline compounds.",
+"Every SIP is a vote for your future self.",
+"Time in market > timing the market."
+]
+
+document.getElementById("quote").innerText=quotes[Math.floor(Math.random()*quotes.length)]
 
 }
 
