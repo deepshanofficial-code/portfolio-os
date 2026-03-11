@@ -1,11 +1,10 @@
-
 <!DOCTYPE html>
+
 <html>
 <head>
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <title>Portfolio OS</title>
 
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
@@ -20,8 +19,6 @@ background:#05070c;
 color:#e6e9ef;
 overflow-x:hidden;
 }
-
-/* animated gradient */
 
 body::before{
 content:'';
@@ -117,6 +114,7 @@ font-style:italic;
 }
 
 </style>
+
 </head>
 
 <body>
@@ -131,12 +129,12 @@ font-style:italic;
 
 <div class="card">
 <h3>Total Invested</h3>
-<div class="stat" id="invested"></div>
+<div class="stat" id="invested">₹0</div>
 </div>
 
 <div class="card">
 <h3>Current Portfolio</h3>
-<div class="stat" id="current"></div>
+<div class="stat" id="current">₹0</div>
 <div id="profit"></div>
 </div>
 
@@ -156,12 +154,13 @@ font-style:italic;
 
 <select id="assetType">
 <option value="stock">Stock</option>
-<option value="mf">Mutual Fund</option>
+<option value="mf">Mutual Fund (SIP)</option>
 </select>
 
 <input id="name" placeholder="Stock or Fund Name">
-<input id="qty" placeholder="Qty or SIP">
+<input id="qty" placeholder="Qty or SIP amount">
 <input id="price" placeholder="Buy price / NAV">
+<input id="sipDate" type="date">
 
 <button onclick="buy()">Add</button>
 
@@ -171,9 +170,7 @@ font-style:italic;
 
 <h3>Sell Asset</h3>
 
-<select id="sellAsset"></select>
-<input id="sellQty" placeholder="Qty / Units">
-<input id="sellPrice" placeholder="Sell price">
+<select id="sellAsset"></select> <input id="sellQty" placeholder="Qty"> <input id="sellPrice" placeholder="Sell price">
 
 <button onclick="sell()">Sell</button>
 
@@ -183,18 +180,9 @@ font-style:italic;
 
 <h3>Update Market Price</h3>
 
-<select id="priceAsset"></select>
-<input id="marketPrice" placeholder="Latest price">
+<select id="priceAsset"></select> <input id="marketPrice" placeholder="Latest price">
 
 <button onclick="updatePrice()">Update</button>
-
-</div>
-
-<div class="card">
-
-<h3>Reset Stocks</h3>
-
-<button onclick="clearStocks()">Clear Stock Holdings</button>
 
 </div>
 
@@ -220,75 +208,70 @@ font-style:italic;
 
 <script>
 
-/* cursor */
-
 const cursor=document.getElementById("cursor")
-
 document.addEventListener("mousemove",e=>{
 cursor.style.left=e.clientX+"px"
 cursor.style.top=e.clientY+"px"
 })
 
-/* storage */
-
-let ledger=JSON.parse(localStorage.getItem("ledger"))||[]
+let stocks=JSON.parse(localStorage.getItem("stocks"))||[]
+let funds=JSON.parse(localStorage.getItem("funds"))||[]
 let prices=JSON.parse(localStorage.getItem("prices"))||{}
 
-/* BUY */
+function save(){
+localStorage.setItem("stocks",JSON.stringify(stocks))
+localStorage.setItem("funds",JSON.stringify(funds))
+localStorage.setItem("prices",JSON.stringify(prices))
+render()
+}
 
 function buy(){
 
 let type=document.getElementById("assetType").value
 let name=document.getElementById("name").value.trim()
-
 let qty=parseFloat(document.getElementById("qty").value)
 let price=parseFloat(document.getElementById("price").value)
+let sipDate=document.getElementById("sipDate").value
 
 if(!name||isNaN(qty)||isNaN(price)) return
 
-ledger.push({
-type:"buy",
-asset:type,
-name,
-qty,
-price,
-date:new Date()
-})
+if(type==="stock"){
+stocks.push({name,qty,price})
+}
+
+if(type==="mf"){
+funds.push({name,sip:qty,nav:price,start:sipDate})
+}
 
 save()
 
 }
-
-/* SELL */
 
 function sell(){
 
 let name=document.getElementById("sellAsset").value
 let qty=parseFloat(document.getElementById("sellQty").value)
-let price=parseFloat(document.getElementById("sellPrice").value)
 
-if(!name||isNaN(qty)||isNaN(price)) return
+let s=stocks.find(x=>x.name===name)
 
-ledger.push({
-type:"sell",
-name,
-qty,
-price,
-date:new Date()
-})
+if(!s) return
+
+s.qty-=qty
+
+if(s.qty<=0){
+stocks=stocks.filter(x=>x.name!==name)
+}
 
 save()
 
 }
-
-/* UPDATE PRICE */
 
 function updatePrice(){
 
 let name=document.getElementById("priceAsset").value
 let p=parseFloat(document.getElementById("marketPrice").value)
 
-if(!name||isNaN(p)) return
+if(isNaN(p)) return
 
 prices[name]=p
 
@@ -296,119 +279,58 @@ save()
 
 }
 
-/* EDIT NAME */
+function monthsBetween(start){
 
-function edit(asset){
+let s=new Date(start)
+let now=new Date()
 
-let newName=prompt("Correct asset name",asset)
-
-if(!newName) return
-
-ledger.forEach(t=>{
-if(t.name===asset) t.name=newName
-})
-
-if(prices[asset]){
-prices[newName]=prices[asset]
-delete prices[asset]
-}
-
-save()
+return (now.getFullYear()-s.getFullYear())*12+(now.getMonth()-s.getMonth())+1
 
 }
-
-/* CLEAR STOCKS */
-
-function clearStocks(){
-
-let confirmReset=confirm("Clear all STOCK holdings? Mutual funds remain.")
-
-if(!confirmReset) return
-
-ledger=ledger.filter(t=>t.asset==="mf")
-
-localStorage.setItem("ledger",JSON.stringify(ledger))
-
-render()
-
-}
-
-/* SAVE */
-
-function save(){
-
-localStorage.setItem("ledger",JSON.stringify(ledger))
-localStorage.setItem("prices",JSON.stringify(prices))
-
-render()
-
-}
-
-/* RENDER */
 
 function render(){
 
-let holdings={}
 let invested=0
 let current=0
-
+let holdings={}
 let timeline=""
 
-ledger.forEach(t=>{
+stocks.forEach(s=>{
 
-if(t.type==="buy"){
+holdings[s.name]=(holdings[s.name]||0)+s.qty
 
-holdings[t.name]=(holdings[t.name]||0)+t.qty
+let mp=prices[s.name]||s.price
 
-invested+=t.qty*t.price
+invested+=s.qty*s.price
+current+=s.qty*mp
 
-let mp=prices[t.name]||t.price
-
-current+=t.qty*mp
-
-timeline+=`${t.name} BUY ${t.qty} @ ₹${t.price}<br>`
-
-}
-
-if(t.type==="sell"){
-
-holdings[t.name]-=t.qty
-
-timeline+=`${t.name} SELL ${t.qty} @ ₹${t.price}<br>`
-
-}
+timeline+=`${s.name} BUY ${s.qty} @ ₹${s.price}<br>`
 
 })
 
-/* holdings */
+funds.forEach(f=>{
+
+let m=monthsBetween(f.start)
+let investedMF=m*f.sip
+
+invested+=investedMF
+current+=investedMF
+
+holdings[f.name]="₹"+investedMF
+
+timeline+=`${f.name} SIP ₹${f.sip} × ${m} months<br>`
+
+})
 
 let table=document.getElementById("holdings")
 table.innerHTML=""
 
 for(let a in holdings){
-
-if(holdings[a]>0){
-
-table.innerHTML+=`
-<tr>
-<td>${a}</td>
-<td>${holdings[a]}</td>
-<td><button onclick="edit('${a}')">Edit</button></td>
-</tr>
-`
-
+table.innerHTML+=`<tr><td>${a}</td><td>${holdings[a]}</td></tr>`
 }
 
-}
-
-/* dropdowns */
-
-let list=Object.keys(holdings)
-
-document.getElementById("sellAsset").innerHTML=list.map(a=>`<option>${a}</option>`).join("")
-document.getElementById("priceAsset").innerHTML=list.map(a=>`<option>${a}</option>`).join("")
-
-/* stats */
+document.getElementById("sellAsset").innerHTML=stocks.map(s=>`<option>${s.name}</option>`).join("")
+document.getElementById("priceAsset").innerHTML=[...stocks.map(s=>s.name),...funds.map(f=>f.name)].map(a=>`<option>${a}</option>`).join("")
 
 document.getElementById("invested").innerText="₹"+invested.toFixed(2)
 document.getElementById("current").innerText="₹"+current.toFixed(2)
@@ -416,15 +338,11 @@ document.getElementById("profit").innerText="P/L ₹"+(current-invested).toFixed
 
 document.getElementById("timeline").innerHTML=timeline
 
-/* charts */
-
 if(window.allocChart) window.allocChart.destroy()
 if(window.futureChart) window.futureChart.destroy()
 
 window.allocChart=new Chart(document.getElementById("allocChart"),{
-
 type:"doughnut",
-
 data:{
 labels:["Invested","Profit"],
 datasets:[{
@@ -432,12 +350,8 @@ data:[invested,current-invested],
 backgroundColor:["#4da3ff","#ff5c7a"]
 }]
 },
-
 options:{plugins:{legend:{display:false}}}
-
 })
-
-/* future */
 
 let sip=2100
 let r=0.12/12
@@ -445,23 +359,37 @@ let total=0
 let vals=[]
 
 for(let i=0;i<240;i++){
-
 total=total*(1+r)+sip
-
 if(i%12===0) vals.push(Math.round(total))
-
 }
 
 window.futureChart=new Chart(document.getElementById("futureChart"),{
-
 type:"line",
-
 data:{
 labels:Array.from({length:20},(_,i)=>i+1),
 datasets:[{
 data:vals,
-borderColor:"
-```
+borderColor:"#4da3ff",
+tension:.3
+}]
+},
+options:{plugins:{legend:{display:false}}}
+})
+
+const quotes=[
+"Compounding quietly rewrites your future.",
+"Markets fluctuate. Discipline compounds.",
+"Every SIP is a vote for your future self.",
+"Time in market beats timing the market."
+]
+
+document.getElementById("quote").innerText=quotes[Math.floor(Math.random()*quotes.length)]
+
+}
+
+render()
+
 </script>
+
 </body>
 </html>
