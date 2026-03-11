@@ -281,6 +281,29 @@ save()
 
 }
 
+  <div class="card">
+
+<h3>Reset Portfolio</h3>
+
+<button onclick="clearAll()">Clear All Data</button>
+
+</div>
+
+  function clearAll(){
+
+let confirmReset = confirm("This will erase all portfolio data. Continue?")
+
+if(!confirmReset) return
+
+localStorage.removeItem("ledger")
+localStorage.removeItem("prices")
+
+ledger=[]
+prices={}
+
+render()
+
+}
 /* EDIT HOLDING */
 
 function edit(asset){
